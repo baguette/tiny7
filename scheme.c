@@ -1141,9 +1141,9 @@ static pointer mk_sharp_const(scheme *sc, char *name) {
      long    x;
      char    tmp[STRBUFFSIZE];
 
-     if (!strcmp(name, "t"))
+     if (!strcmp(name, "t") || !strcmp(name, "true"))
           return (sc->T);
-     else if (!strcmp(name, "f"))
+     else if (!strcmp(name, "f") || !strcmp(name, "false"))
           return (sc->F);
      else if (*name == 'o') {/* #o (octal) */
           snprintf(tmp, STRBUFFSIZE, "0%s", name+1);
@@ -1917,9 +1917,9 @@ static void atom2str(scheme *sc, pointer l, int f, char **pp, int *plen) {
      if (l == sc->NIL) {
           p = "()";
      } else if (l == sc->T) {
-          p = "#t";
+          p = "#true";
      } else if (l == sc->F) {
-          p = "#f";
+          p = "#false";
      } else if (l == sc->EOF_OBJ) {
           p = "#<EOF>";
      } else if (is_port(l)) {
