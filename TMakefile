@@ -1,0 +1,114 @@
+param CC gcc
+param CFLAGS "-fpic"
+param DEBUG "-g -Wno-char-subscripts -O0"
+
+param PREFIX "/usr/local"
+param DESTDIR ""
+
+param INSTALLDIR "install -d"
+param INSTALLEXE "install -m 755"
+param INSTALL    "install -m 644"
+
+param OBJSUF .o
+param LIBSUF .a
+param SOSUF .so
+param EXESUF ""
+param LIBPREF lib
+
+param RM "rm -f"
+param AR ar
+param RANLIB ranlib
+
+param LD gcc
+param LDFLAGS -shared
+param SYSLIBS "-ldl -lm"
+param PLATFORM_FEATURES "-DSUN_DL=1"
+
+param FEATURES "$PLATFORM_FEATURES -DUSE_DL=1 -DUSE_MATH=1 -DUSE_ASCII_NAMES=1"
+
+set BINTARGET "tiny7$EXESUF"
+set LIBTARGET "${LIBPREF}tiny7$SOSUF"
+set STATICLIBTARGET "${LIBPREF}tiny7$LIBSUF"
+set HSRC {scheme.h dynload.h scheme-private.h opdefines.h}
+
+rule all {$LIBTARGET $STATICLIBTARGET $BINTARGET}
+
+set OBJS [sub .c .o {
+	global CC CFLAGS DEBUG FEATURES
+	set SRC {}
+	foreach f $INPUTS {
+		if {[file extension $f] == ".c"} {
+			lappend SRC $f
+		}
+	}
+	puts "$CC -I. -c {*}$CFLAGS {*}$DEBUG {*}$FEATURES -o $TARGET {*}$SRC"
+	exec $CC -I. -c {*}$CFLAGS {*}$DEBUG {*}$FEATURES -o $TARGET {*}$SRC
+}]
+
+rule $LIBTARGET $OBJS {
+	global LD OBJS SYSLIBS
+	exec $LD -o $TARGET {*}$INPUTS {*}$SYSLIBS
+}
+
+rule $BINTARGET $OBJS {
+	global CC CFLAGS DEBUG SYSLIBS PREFIX
+	param LIBEXECDIR "$PREFIX/lib/tiny7"
+	exec $CC -o $TARGET -DInitFile=\"$LIBEXECDIR/init.scm\" \
+	         {*}$DEBUG {*}$INPUTS {*}$SYSLIBS
+}
+
+rule $STATICLIBTARGET $OBJS {
+	global AR RANLIB
+	exec $AR cr $TARGET {*}$INPUTS
+	exec $RANLIB $TARGET
+}
+
+rule scheme.o {scheme.h scheme-private.h opdefines.h}
+rule dynload.o {dynload.h}
+
+rule! clean {} {
+	global RM OBJS BINTARGET LIBTARGET STATICLIBTARGET EXESUF
+	exec {*}$RM {*}$OBJS $LIBTARGET $STATICLIBTARGET $BINTARGET
+	exec {*}$RM tinyscheme.ilk tinyscheme.map tinyscheme.pdb tinyscheme.exp
+	exec {*}$RM scheme.ilk scheme.map scheme.pdb scheme.lib scheme.exp
+	exec {*}$RM "*~"
+}
+
+set TAGS_SRCS {scheme.h scheme.c dynload.h dynload.c}
+
+rule tags {TAGS}
+rule TAGS {$TAGS_SRCS} {
+	ctags {*}$INPUTS
+}
+
+rule! install {all} {
+	global BINTARGET STATICLIBTARGET LIBTARGET HSRC
+	global INSTALL INSTALLDIR INSTALLEXE
+	global PREFIX DESTDIR LIBEXECDIR
+
+	param BINDIR "$PREFIX/bin"
+	param LIBDIR "$PREFIX/lib"
+	param LIBEXECDIR "$PREFIX/lib/tiny7"
+	param INCLUDEDIR "$PREFIX/include/tiny7"
+	#param MANDIR "$PREFIX/share/man"
+	param DOCDIR "$PREFIX/share/doc/tiny7"
+
+	exec {*}$INSTALLDIR "$DESTDIR/$BINDIR"
+	exec {*}$INSTALLDIR "$DESTDIR/$LIBDIR"
+	exec {*}$INSTALLDIR "$DESTDIR/$LIBEXECDIR"
+	exec {*}$INSTALLDIR "$DESTDIR/$INCLUDEDIR"
+	#exec {*}$INSTALLDIR "$DESTDIR/$MANDIR"
+	exec {*}$INSTALLDIR "$DESTDIR/$DOCDIR"
+
+	exec {*}$INSTALLEXE $BINTARGET "$DESTDIR/$BINDIR"
+	exec {*}$INSTALL $STATICLIBTARGET "$DESTDIR/$LIBDIR"
+	exec {*}$INSTALLEXE $LIBTARGET "$DESTDIR/$LIBDIR"
+	foreach h $HSRC {
+		exec {*}$INSTALL $h "$DESTDIR/$INCLUDEDIR"
+	}
+	exec {*}$INSTALL init.scm "$DESTDIR/$LIBEXECDIR"
+	foreach doc {CHANGES COPYING Manual.txt} {
+		exec {*}$INSTALL $doc "$DESTDIR/$DOCDIR"
+	}
+}
+

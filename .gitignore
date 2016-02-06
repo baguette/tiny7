@@ -3,4 +3,8 @@
 *.so
 *.a
 scheme
+**/*.swp
+.tmcache
+pkg
+tiny7
 
