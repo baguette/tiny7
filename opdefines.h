@@ -190,6 +190,7 @@
     _OP_DEF(opexe_5, 0,                                0,  0,       0,                               OP_RDUNQUOTE        )
     _OP_DEF(opexe_5, 0,                                0,  0,       0,                               OP_RDUQTSP          )
     _OP_DEF(opexe_5, 0,                                0,  0,       0,                               OP_RDVEC            )
+    _OP_DEF(opexe_5, 0,                                0,  0,       0,                               OP_RDBYTEVEC        )
     _OP_DEF(opexe_5, 0,                                0,  0,       0,                               OP_P0LIST           )
     _OP_DEF(opexe_5, 0,                                0,  0,       0,                               OP_P1LIST           )
     _OP_DEF(opexe_5, 0,                                0,  0,       0,                               OP_PVECFROM         )

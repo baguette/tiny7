@@ -56,6 +56,7 @@
 #define TOK_SHARP_CONST 11
 #define TOK_VEC     12
 #define TOK_BYTEVEC 13
+#define TOK_DATUMCOMMENT 14
 
 #define BACKQUOTE '`'
 #define DELIMITERS  "()\";\f\t\v\n\r "
@@ -1877,6 +1878,13 @@ static int token(scheme *sc) {
           c=inchar(sc);
           if (c == '(') {
                return (TOK_VEC);
+          } else if (c == 'u') {
+            c = inchar(sc);
+            if (c == '8') {
+                return (TOK_BYTEVEC);
+            }
+          } else if (c == ';') {
+              return (TOK_DATUMCOMMENT);
           } else if(c == '!') {
                while ((c=inchar(sc)) != '\n' && c!=EOF)
                    ;
@@ -4168,17 +4176,14 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
           case TOK_EOF:
                s_return(sc,sc->EOF_OBJ);
           /* NOTREACHED */
-/*
- * Commented out because we now skip comments in the scanner
- *
-          case TOK_COMMENT: {
-               int c;
-               while ((c=inchar(sc)) != '\n' && c!=EOF)
-                    ;
+          case TOK_DATUMCOMMENT:   /* #;datum comments */
                sc->tok = token(sc);
-               s_goto(sc,OP_RDSEXPR);
-          }
-*/
+               s_save(sc, OP_READ, sc->NIL, sc->NIL);
+               s_goto(sc, OP_RDSEXPR);
+          case TOK_BYTEVEC:
+               s_save(sc, OP_RDBYTEVEC, sc->NIL, sc->NIL);
+               sc->tok = token(sc);
+               s_goto(sc, OP_RDSEXPR);
           case TOK_VEC:
                s_save(sc,OP_RDVEC,sc->NIL,sc->NIL);
                /* fall through */
@@ -4247,14 +4252,6 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
      case OP_RDLIST: {
           sc->args = cons(sc, sc->value, sc->args);
           sc->tok = token(sc);
-/* We now skip comments in the scanner
-          while (sc->tok == TOK_COMMENT) {
-               int c;
-               while ((c=inchar(sc)) != '\n' && c!=EOF)
-                    ;
-               sc->tok = token(sc);
-          }
-*/
           if (sc->tok == TOK_EOF)
                { s_return(sc,sc->EOF_OBJ); }
           else if (sc->tok == TOK_RPAREN) {
@@ -4314,6 +4311,10 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
           s_goto(sc,OP_APPLY);*/
           sc->args=sc->value;
           s_goto(sc,OP_VECTOR);
+     
+     case OP_RDBYTEVEC:
+          sc->args = sc->value;
+          s_goto(sc, OP_BYTEVECTOR);
 
      /* ========== printing part ========== */
      case OP_P0LIST:
