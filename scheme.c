@@ -55,6 +55,7 @@
 #define TOK_SHARP   10
 #define TOK_SHARP_CONST 11
 #define TOK_VEC     12
+#define TOK_BYTEVEC 13
 
 #define BACKQUOTE '`'
 #define DELIMITERS  "()\";\f\t\v\n\r "
@@ -123,7 +124,8 @@ enum scheme_types {
   T_MACRO=12,
   T_PROMISE=13,
   T_ENVIRONMENT=14,
-  T_LAST_SYSTEM_TYPE=14
+  T_BYTEVECTOR=15,
+  T_LAST_SYSTEM_TYPE=15
 };
 
 /* ADJ is enough slack to align cells in a TYPE_BITS-bit boundary */
@@ -168,13 +170,20 @@ static num num_one;
 
 INTERFACE INLINE int is_string(pointer p)     { return (type(p)==T_STRING); }
 #define strvalue(p)      ((p)->_object._string._svalue)
-#define strlength(p)        ((p)->_object._string._length)
+#define strlength(p)     ((p)->_object._string._length)
+
+#define bvecvalue(p)     ((p)->_object._bytevec._bytes)
+#define bveclength(p)    ((p)->_object._bytevec._length)
 
 INTERFACE static int is_list(scheme *sc, pointer p);
 INTERFACE INLINE int is_vector(pointer p)    { return (type(p)==T_VECTOR); }
 INTERFACE static void fill_vector(pointer vec, pointer obj);
 INTERFACE static pointer vector_elem(pointer vec, int ielem);
 INTERFACE static pointer set_vector_elem(pointer vec, int ielem, pointer a);
+INTERFACE INLINE int is_bytevector(pointer p) { return (type(p)==T_BYTEVECTOR); }
+INTERFACE static void fill_bytevector(pointer vec, unsigned char obj);
+INTERFACE static pointer bytevector_elem(scheme *sc, pointer vec, int ielem);
+INTERFACE static pointer set_bytevector_elem(scheme *sc, pointer vec, int ielem, unsigned char a);
 INTERFACE INLINE int is_number(pointer p)    { return (type(p)==T_NUMBER); }
 INTERFACE INLINE int is_integer(pointer p) {
   if (!is_number(p))
@@ -340,6 +349,7 @@ static pointer find_slot_in_env(scheme *sc, pointer env, pointer sym, int all);
 static pointer mk_number(scheme *sc, num n);
 static char *store_string(scheme *sc, int len, const char *str, char fill);
 static pointer mk_vector(scheme *sc, int len);
+static pointer mk_bytevector(scheme *sc, int len);
 static pointer mk_atom(scheme *sc, char *q);
 static pointer mk_sharp_const(scheme *sc, char *name);
 static pointer mk_port(scheme *sc, port *p);
@@ -1004,7 +1014,27 @@ INTERFACE pointer mk_empty_string(scheme *sc, int len, char fill) {
 }
 
 INTERFACE static pointer mk_vector(scheme *sc, int len)
-{ return get_vector_object(sc,len,sc->NIL); }
+{
+    return get_vector_object(sc,len,sc->NIL);
+}
+
+INTERFACE static pointer mk_bytevector(scheme *sc, int len)
+{
+    pointer vec;
+    unsigned char *p = (unsigned char *)sc->malloc(len);
+    
+    if (!p) {
+        return sc->NIL;
+    }
+    
+    vec = get_cell(sc, sc->NIL, sc->NIL);
+    
+    typeflag(vec) = T_BYTEVECTOR|T_ATOM;
+    bvecvalue(vec) = p;
+    bveclength(vec) = len;
+    
+    return (vec);
+}
 
 INTERFACE static void fill_vector(pointer vec, pointer obj) {
      int i;
@@ -1017,6 +1047,11 @@ INTERFACE static void fill_vector(pointer vec, pointer obj) {
      }
 }
 
+INTERFACE static void fill_bytevector(pointer vec, unsigned char fill)
+{
+    memset(bvecvalue(vec), fill, bveclength(vec));
+}
+
 INTERFACE static pointer vector_elem(pointer vec, int ielem) {
      int n=ielem/2;
      if(ielem%2==0) {
@@ -1026,6 +1061,14 @@ INTERFACE static pointer vector_elem(pointer vec, int ielem) {
      }
 }
 
+INTERFACE static pointer bytevector_elem(scheme *sc, pointer vec, int ielem) {
+    unsigned char *p = bvecvalue(vec);
+    if (ielem > bveclength(vec)) {
+        return sc->NIL;
+    }
+    return mk_integer(sc, p[ielem]);
+}
+
 INTERFACE static pointer set_vector_elem(pointer vec, int ielem, pointer a) {
      int n=ielem/2;
      if(ielem%2==0) {
@@ -1033,6 +1076,15 @@ INTERFACE static pointer set_vector_elem(pointer vec, int ielem, pointer a) {
      } else {
           return cdr(vec+1+n)=a;
      }
+}
+
+INTERFACE static pointer set_bytevector_elem(scheme *sc, pointer vec, int ielem, unsigned char a) {
+    unsigned char *p = bvecvalue(vec);
+    if (ielem > bveclength(vec)) {
+        return sc->NIL;
+    }
+    p[ielem] = a;
+    return bytevector_elem(sc, vec, ielem);
 }
 
 /* get new symbol */
@@ -1324,6 +1376,8 @@ static void finalize_cell(scheme *sc, pointer a) {
       port_close(sc,a,port_input|port_output);
     }
     sc->free(a->_object._port);
+  } else if (is_bytevector(a)) {
+    sc->free(bvecvalue(a));
   }
 }
 
@@ -3528,6 +3582,21 @@ static pointer opexe_2(scheme *sc, enum scheme_opcodes op) {
           s_return(sc,vec);
      }
 
+     case OP_BYTEVECTOR: {   /* bytevector */
+          int i;
+          pointer vec;
+          int len=list_length(sc,sc->args);
+          if(len<0) {
+               Error_1(sc,"vector: not a proper list:",sc->args);
+          }
+          vec=mk_bytevector(sc,len);
+          if(sc->no_memory) { s_return(sc, sc->sink); }
+          for (x = sc->args, i = 0; is_pair(x); x = cdr(x), i++) {
+               set_bytevector_elem(sc,vec,i,ivalue(car(x)));
+          }
+          s_return(sc,vec);
+     }
+
      case OP_MKVECTOR: { /* make-vector */
           pointer fill=sc->NIL;
           int len;
@@ -3546,8 +3615,29 @@ static pointer opexe_2(scheme *sc, enum scheme_opcodes op) {
           s_return(sc,vec);
      }
 
+     case OP_MKBYTEVECTOR: { /* make-bytevector */
+          pointer fill=sc->NIL;
+          int len;
+          pointer vec;
+
+          len=ivalue(car(sc->args));
+
+          if(cdr(sc->args)!=sc->NIL) {
+               fill=cadr(sc->args);
+          }
+          vec=mk_bytevector(sc,len);
+          if(sc->no_memory) { s_return(sc, sc->sink); }
+          if(fill!=sc->NIL) {
+               fill_bytevector(vec,ivalue(fill));
+          }
+          s_return(sc,vec);
+     }
+
      case OP_VECLEN:  /* vector-length */
           s_return(sc,mk_integer(sc,ivalue(car(sc->args))));
+
+     case OP_BYTEVECLEN:  /* bytevector-length */
+          s_return(sc,mk_integer(sc,bveclength(car(sc->args))));
 
      case OP_VECREF: { /* vector-ref */
           int index;
@@ -3559,6 +3649,17 @@ static pointer opexe_2(scheme *sc, enum scheme_opcodes op) {
           }
 
           s_return(sc,vector_elem(car(sc->args),index));
+     }
+
+     case OP_BYTEVECREF: { /* bytevector-u8-ref */
+          int index;
+          index = ivalue(cadr(sc->args));
+
+          if (index >= bveclength(car(sc->args))) {
+                Error_1(sc, "vector-u8-ref: out of bounds:", cadr(sc->args));
+          }
+
+          s_return(sc, bytevector_elem(sc, car(sc->args), index));
      }
 
      case OP_VECSET: {   /* vector-set! */
@@ -3575,6 +3676,22 @@ static pointer opexe_2(scheme *sc, enum scheme_opcodes op) {
 
           set_vector_elem(car(sc->args),index,caddr(sc->args));
           s_return(sc,car(sc->args));
+     }
+
+     case OP_BYTEVECSET: {  /* bytevector-u8-set! */
+          int index;
+
+          if (is_immutable(car(sc->args))) {
+               Error_1(sc, "bytevector-u8-set!: unable to alter immutable bytevector:", car(sc->args));
+          }
+
+          index = ivalue(cadr(sc->args));
+          if (index >= bveclength(car(sc->args))) {
+               Error_1(sc, "bytevector-u8-set!: out of bounds:", cadr(sc->args));
+          }
+
+          set_bytevector_elem(sc, car(sc->args), index, ivalue(caddr(sc->args)));
+          s_return(sc, car(sc->args));
      }
 
      default:
@@ -3710,6 +3827,8 @@ static pointer opexe_3(scheme *sc, enum scheme_opcodes op) {
           s_retbool(is_environment(car(sc->args)));
      case OP_VECTORP:     /* vector? */
           s_retbool(is_vector(car(sc->args)));
+     case OP_BYTEVECTORP: /* bytevector? */
+          s_retbool(is_bytevector(car(sc->args)));
      case OP_EQ:         /* eq? */
           s_retbool(car(sc->args) == cadr(sc->args));
      case OP_EQV:        /* eqv? */
@@ -4202,6 +4321,10 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
                putstr(sc,"#(");
                sc->args=cons(sc,sc->args,mk_integer(sc,0));
                s_goto(sc,OP_PVECFROM);
+          } else if(is_bytevector(sc->args)) {
+               putstr(sc,"#u8(");
+               sc->args=cons(sc,sc->args,mk_integer(sc,0));
+               s_goto(sc,OP_PBVECFROM);
           } else if(is_environment(sc->args)) {
                putstr(sc,"#<ENVIRONMENT>");
                s_return(sc,sc->T);
@@ -4260,6 +4383,23 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
                pointer elem=vector_elem(vec,i);
                ivalue_unchecked(cdr(sc->args))=i+1;
                s_save(sc,OP_PVECFROM, sc->args, sc->NIL);
+               sc->args=elem;
+               if (i > 0)
+                   putstr(sc," ");
+               s_goto(sc,OP_P0LIST);
+          }
+     }
+     case OP_PBVECFROM: {
+          int i=ivalue_unchecked(cdr(sc->args));
+          pointer vec=car(sc->args);
+          int len=ivalue_unchecked(vec);
+          if(i==len) {
+               putstr(sc,")");
+               s_return(sc,sc->T);
+          } else {
+               pointer elem=bytevector_elem(sc,vec,i);
+               ivalue_unchecked(cdr(sc->args))=i+1;
+               s_save(sc,OP_PBVECFROM, sc->args, sc->NIL);
                sc->args=elem;
                if (i > 0)
                    putstr(sc," ");
@@ -4338,6 +4478,10 @@ static int is_nonneg(pointer p) {
   return ivalue(p)>=0 && is_integer(p);
 }
 
+static int is_byte(pointer p) {
+  return is_nonneg(p) && ivalue(p) >= 0 && ivalue(p) <= 255;
+}
+
 /* Correspond carefully with following defines! */
 static struct {
   test_predicate fct;
@@ -4357,7 +4501,9 @@ static struct {
   {is_vector, "vector"},
   {is_number, "number"},
   {is_integer, "integer"},
-  {is_nonneg, "non-negative integer"}
+  {is_nonneg, "non-negative integer"},
+  {is_byte, "byte-sized non-negative integer"},
+  {is_bytevector, "bytevector"}
 };
 
 #define TST_NONE 0
@@ -4375,6 +4521,8 @@ static struct {
 #define TST_NUMBER "\014"
 #define TST_INTEGER "\015"
 #define TST_NATURAL "\016"
+#define TST_BYTE    "\017"
+#define TST_BYTEVECTOR "\020"
 
 typedef struct {
   dispatch_func func;

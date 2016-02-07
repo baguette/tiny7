@@ -55,6 +55,10 @@ struct cell {
       struct cell *_car;
       struct cell *_cdr;
     } _cons;
+    struct {
+      unsigned char *_bytes;
+      int _length;
+    } _bytevec;
   } _object;
 };
 
@@ -167,6 +171,7 @@ int is_real(pointer p);
 int is_character(pointer p);
 long charvalue(pointer p);
 int is_vector(pointer p);
+int is_bytevector(pointer p);
 
 int is_port(pointer p);
 

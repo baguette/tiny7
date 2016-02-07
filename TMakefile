@@ -34,15 +34,16 @@ set HSRC {scheme.h dynload.h scheme-private.h opdefines.h}
 rule all {$LIBTARGET $STATICLIBTARGET $BINTARGET}
 
 set OBJS [sub .c .o {
-	global CC CFLAGS DEBUG FEATURES
+	global CC CFLAGS DEBUG FEATURES PREFIX
+	param LIBEXECDIR "$PREFIX/lib/tiny7"
 	set SRC {}
 	foreach f $INPUTS {
 		if {[file extension $f] == ".c"} {
 			lappend SRC $f
 		}
 	}
-	puts "$CC -I. -c {*}$CFLAGS {*}$DEBUG {*}$FEATURES -o $TARGET {*}$SRC"
-	exec $CC -I. -c {*}$CFLAGS {*}$DEBUG {*}$FEATURES -o $TARGET {*}$SRC
+	exec $CC -I. -c -DInitFile=\"$LIBEXECDIR/init.scm\" \
+	         {*}$CFLAGS {*}$DEBUG {*}$FEATURES -o $TARGET {*}$SRC
 }]
 
 rule $LIBTARGET $OBJS {
@@ -52,9 +53,7 @@ rule $LIBTARGET $OBJS {
 
 rule $BINTARGET $OBJS {
 	global CC CFLAGS DEBUG SYSLIBS PREFIX
-	param LIBEXECDIR "$PREFIX/lib/tiny7"
-	exec $CC -o $TARGET -DInitFile=\"$LIBEXECDIR/init.scm\" \
-	         {*}$DEBUG {*}$INPUTS {*}$SYSLIBS
+	exec $CC -o $TARGET {*}$DEBUG {*}$INPUTS {*}$SYSLIBS
 }
 
 rule $STATICLIBTARGET $OBJS {
