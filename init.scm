@@ -509,7 +509,7 @@
     (cond
       ((null? lst) #f)
       ((cmp? obj (car lst)) lst)
-      (else (member obj (cdr lst) cmp?))))
+      (else (member obj (cdr lst) cmp?)))))
 
 (define (memq obj lst)
   (member obj lst eq?))
