@@ -32,12 +32,13 @@
 
 ;;;; Utility to ease macro creation
 (define (macro-expand form)
-  ((eval (get-closure-code (eval (car form)))) form))
+  (let ((object (eval (car form))))
+    ((eval (get-closure-code object) (get-closure-environment object)) form)))
 
 (define (macro-expand-all form)
-   (if (macro? form)
-     (macro-expand-all (macro-expand form))
-     form))
+  (if (macro? form)
+    (macro-expand-all (macro-expand form))
+    form))
 
 (define *compile-hook* macro-expand-all)
 
@@ -507,8 +508,8 @@
                 equal?
                 (car cmp))))
     (cond
-      ((not (pair? lst)) (error "member: not a list:" lst))
       ((null? lst) #f)
+      ((not (pair? lst)) (error "member: not a list:" lst))
       ((cmp? obj (car lst)) lst)
       (else (member obj (cdr lst) cmp?)))))
 
@@ -522,8 +523,8 @@
                 equal?
                 (car cmp))))
   (cond
-    ((not (pair? alst)) (error "assoc: not a list:" alst))
     ((null? alst) #f)
+    ((not (pair? alst)) (error "assoc: not a list:" alst))
     ((not (pair? (car alst))) (error "assoc: not an alist:" alst))
     ((cmp? obj (caar alst)) (car alst))
     (else (assoc obj (cdr alst) cmp?)))))
@@ -786,5 +787,10 @@
                (eq? ax bx))))
 
       (f form rename compare))))
+
+
+;; TODO Expose the Tiny7 library search path to Scheme
+(load "syntax-rules.scm")
+
 
 (gc-verbose #f)

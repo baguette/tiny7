@@ -2847,11 +2847,12 @@ case OP_REAL_APPLY:
     /* Should not accept promise */
     /* make environment */
     new_frame_in_env(sc, closure_env(sc->code));
+    
     for (x = car(closure_code(sc->code)), y = sc->args;
          is_pair(x);
          x = cdr(x), y = cdr(y)) {
       if (y == sc->NIL) {
-        Error_0(sc, "not enough arguments");
+        Error_1(sc, "not enough arguments", closure_code(sc->code));
       } else {
         new_slot_in_env(sc, car(x), car(y));
       }

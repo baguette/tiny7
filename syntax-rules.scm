@@ -1,174 +1,149 @@
 ;;; 'expand-syntax adapted from "Scheme 9 From Empty Space" by Nils M. Holm
-;;; TODO Adaptation for Tiny7 is a work in progress
-
-(define *debug* #f)
-
-(define (print . args)
-  (for-each (lambda (arg)
-              (write arg)
-              (display " "))
-            args)
-  (newline))
-
-(define (info . args)
-  (when *debug*
-    (apply print args)))
+;;; TODO This could use some more testing
 
 ;----------------------------------------------------------------------------
 
-;; `expand-syntax` uses this to check for a 'syntax' type tag
-(define (syntax->list syn)
-  (info 'syntax->list)
-  (cond ((not (pair? syn)) #f)
-        ((not (eq? '!<syntax-rules> (car syn))) #f)
-        (else (cdr syn))))
+;; Scan a `form` and determine which elements correspond to the elements
+;; of `pattern`.  Returns an association list (environment) of the elements
+;; of `pattern` mapping to the corresponding elements in `form`.
+(define (syntax-match form pattern keywords)
+  (define (match form pattern env)
+    (cond ((pair? pattern)
+            (cond ((and (pair? (cdr pattern))
+                        (eq? '... (cadr pattern)))
+                    (let ((e* (map (lambda (x)
+                                     (match x (car pattern) '()))
+                                   form)))
+                      (if (memq #f e*)
+                        #f
+                        (cons (cons '... e*) env))))
+                  ((pair? form)
+                    (let ((e (match (car form) (car pattern) env)))
+                      (and e (match (cdr form) (cdr pattern) e))))
+                  (else #f)))
+          ((memq pattern keywords)
+            (if (eq? pattern form) env #f))
+          ((symbol? pattern)
+            (cons (cons pattern form) env))
+          (else
+            (if (equal? pattern form) env #f))))
+  (let ((e (match form pattern '())))
+    (if e (reverse e) e)))
 
-;; Output a description of the syntax rules in a format for `expand-syntax`
+;; Alias all the symbols in `form`.
+;; TODO Maybe don't rename a symbol if it's quoted?
+(define (alpha-conv form bound rename compare)
+  (define (map-improper f a r)
+    (cond ((null? a)
+            (reverse r))
+          ((not (pair? a))
+            (append (reverse r) (f a)))
+          (else
+            (map-improper f (cdr a) (cons (f (car a)) r)))))
+
+  (define (vector-map f a)
+    (let ((new (make-vector (vector-length a))))
+      (do ((i 0 (+ 1 i))) ((>= i (vector-length a)) new)
+        (vector-set! new i (f (vector-ref a i))))))
+
+  (let ((mapfn (lambda (x)
+                 (alpha-conv x bound rename compare))))
+    (cond ((symbol? form) (rename form))
+          ((pair? form) (map-improper mapfn form '()))
+          ((vector? form) (vector-map mapfn form))
+          (else form))))
+
+;; Substitute variables in the template `tmpl` by the corresponding values
+;; in the environment `env`.
+(define (syntax-expand bound tmpl env rename compare)
+  (define (expand tmpl env)
+    (cond ((not (pair? tmpl))
+            (cond ((assq tmpl env) => cdr)
+                  (else tmpl)))
+          ((and (pair? tmpl)
+                (pair? (cdr tmpl))
+                (compare (cadr tmpl) (rename '...)))
+            (let ((eenv (assoc (rename '...) env compare)))
+              (if (not eenv)
+                (throw "syntax-rules: no matching ... in pattern" tmpl)
+                (begin
+                  (set-car! eenv '(#f))
+                  (append (map (lambda (x)
+                                 (expand (car tmpl) x))
+                               (cdr eenv))
+                          (expand (cddr tmpl) eenv))))))
+          (else
+            (cons (expand (car tmpl) env)
+                  (expand (cdr tmpl) env)))))
+  (expand (alpha-conv tmpl bound rename compare) env))
+
+;; Produce a list of (test . expand) pairs, where `test` returns an
+;; expansion environment if the pair represents a rule suitable for the
+;; given form (`app`) (else #f), and `expand` takes that environment
+;; and produces the expansion of the appropriate rule in that environment.
+(define (rewrite-rules app keywords rules-in rules-out rename compare)
+  (define pattern caar)
+  (define template cadar)
+    (if (null? rules-in)
+      (reverse rules-out)
+      (rewrite-rules app
+                     keywords
+                     (cdr rules-in)
+                     (cons (cons (lambda ()
+                                   (syntax-match app
+                                                 (pattern rules-in)
+                                                 keywords))
+                                 (lambda (env)
+                                   (syntax-expand (pattern rules-in)
+                                                  (template rules-in)
+                                                  env
+                                                  rename
+                                                  compare)))
+                           rules-out)
+                     rename
+                     compare)))
+
+;; As in R5RS
 (define-syntax syntax-rules
-  (lambda (form)
-    (info 'syntax-rules)
-    `(quote (!<syntax-rules> ,@(cdr form)))))
+  (transformer
+    (lambda (form rename compare)
+      (define (list-of? p? a)
+        (or (null? a)
+            (and (p? (car a))
+                 (list-of? p? (cdr a)))))
 
-;; Given a syntax transformer, expand an application of that transformer
-;; to a form that is free of macros.
-(define (expand-syntax form)
-  (info 'expand-syntax)
+      (define (keywords-ok? x)
+        (list-of? symbol? x))
 
-  ;; Extend the environment env
-  (define (ext-env name value env)
-    (info 'ext-env)
-    (cons (cons name value) env))
+      (define (rules-ok? x)
+        (list-of? (lambda (x)
+                    (and (pair? x)
+                         (pair? (car x))
+                         (pair? (cdr x))
+                         (null? (cddr x))))
+                  x))
 
-  ;; Match the ellipsis in a pattern.  Employs the longest match.
-  (define (match-ellipsis form pattern literals env)
-    (info 'match-ellipsis)
-    (define (try-match head tail)
-      (info 'try-match)
-      (let ((v (match tail pattern literals env)))
-        (cond ((v (ext-env '... (reverse head) v)))
-              ((null? head) #f)
-              (else (try-match (cdr head) (cons (car head) tail))))))
-    (try-match (reverse form) '()))
-
-  ;; Match a pattern against a form.  Return an alist of bindings.
-  (define (match form pattern literals env)
-    (info 'match)
-    (define (_match form pattern env)
-      (info '_match)
-      (cond ((memq pattern literals)
-              (if (eq? form pattern) env #f))
-            ((and (pair? pattern) (eq? (car pattern) '...))
-              (match-ellipsis form (cdr pattern) literals env))
-            ((symbol? pattern)
-              (ext-env pattern form env))
-            ((and (pair? pattern) (pair? form))
-              (let ((e (_match (car form) (car pattern) env)))
-                (and e (_match (cdr form) (cdr pattern) e))))
-            (else (if (equal? form pattern) env #f))))
-    (_match form pattern env))
-
-    ;; Find a rule whose pattern matches a given form.
-    ;; Returns (pattern template environment)
-    (define (find-rule form rules name literals)
-      (info 'find-rule)
-      (cond ((null? rules)
-              (throw "syntax-rules: bad syntax" name rules))
-            (else (let ((e (match form (caar rules) literals '())))
-                     (if e
-                       (list (caar rules) (cadar rules) e)
-                       (find-rule form (cdr rules) name literals))))))
-
-    ;; Like 'map, but also works for improper lists.
-    (define (map-improper f a)
-      (info 'map-improper)
-      (letrec ((map-i (lambda (a r)
-                        (cond ((null? a) (reverse r))
-                              ((not (pair? a)) (append (reverse r) (f a)))
-                              (else (map-i (cdr a) (cons (f (car a)) r)))))))
-        (map-i a '())))
-
-    ;; Get a list of forms created by substituting `var` in `tmpl` for
-    ;; possible values listed in `val*`.  Other values from `env` are
-    ;; also substituted.
-    (define (subst-ellipsis var tmpl val* env)
-      (info 'subst-ellipsis)
-      (map (lambda (v)
-             (tmpl->form #f tmpl (cons (cons var v) env)))
-           val*))
-
-    ;; Substitute names from `env` with their associated values in `form`.
-    ;; If `pattern` is `#f`, no ellipsis substitution is performed.
-    (define (tmpl->form pattern form env)
-      (info 'tmpl->form)
-      (cond ((not (pair? form)) (let ((v (assv form env)))
-                                  (if v (cdr v) form)))
-            ((and (pair? form)
-                  (pair? (cdr form))
-                  (eq? (cadr form) '...))
-              (let ((var (if (pair? pattern)
-                           (car pattern)
-                           pattern)))
-                (let ((v-ell (assq '... env))
-                      (v-var (assq var env)))
-                  (if v-ell
-                    (if v-var
-                      (append (subst-ellipsis var
-                                              (car form)
-                                              (if v-var
-                                                (cons (cdr v-var) (cdr v-ell))
-                                                (cdr v-ell))
-                                              env)
-                              (cddr form))
-                      (append (list (tmpl->form #f (car form) env))
-                              (cdr v-ell)
-                              (cddr form)))
-                  (throw "syntax-rules: unmatched ellipsis")))))
-              ((pair? form) (cons (tmpl->form (if (pair? pattern)
-                                                (car pattern)
-                                                #f)
-                                              (car form)
-                                              env)
-                                  (tmpl->form (if (pair? pattern)
-                                                (cdr pattern)
-                                                #f)
-                                              (cdr form)
-                                              env)))
-              (else form)))
-
-    ;; Perfom syntax transformation on `form`.
-    (define (transform form)
-      (info 'transform)
-      (let ((syn (syntax->list (car form))))
-        (if (not syn)
-          (throw "expand-syntax: not a syntax transformer" (car form))
-          (let* ((name (car form))
-                (literals (car syn))
-                (rules (cdr syn))
-                (to-expand (cadr form))
-                (pat/tmpl/env (find-rule to-expand rules name literals)))
-            (info 'name: name)
-            (info 'literals: literals)
-            (info 'rules: rules)
-            (info 'to-expand: to-expand)
-            (info 'pat/tmpl/env: pat/tmpl/env)
-            (expand-all (apply tmpl->form pat/tmpl/env))))))
-
-    ;; Expand all applications of syntax transformers in the given `form`.
-    (define (expand-all form)
-      (info 'expand-all)
-      (cond ((not (pair? form)) form)
-            ((eq? (car form) 'quote) form)
-            ((syntax->list (car form)) (transform form))
-            (else (map-improper expand-all form))))
-
-    (expand-all form))
-
-;----------------------------------------------------------------------------
-
-(let ((test (syntax-rules (print)
-              ((print a) (begin
-                           (display a)
-                           (newline))))))
-  (print 'test-macro: test)
-  (print 'expansion: (expand-syntax '(test (print 'hi)))))
+      (let ((keywords (cadr form))
+            (rules (cddr form)))
+        ;; do some syntax checking
+        (cond ((null? rules)
+                (throw "syntax-rules: too few arguments" rules))
+              ((not (keywords-ok? keywords))
+                (throw "syntax-rules: malformed keyword list" keywords))
+              ((not (rules-ok? rules))
+                (throw "syntax-rules: invalid clause in rules" rules))
+              (else
+                (lambda (form)
+                  (let loop ((rewrite (rewrite-rules form
+                                                     keywords
+                                                     rules
+                                                     '()
+                                                     rename
+                                                     compare)))
+                    (if (null? rewrite)
+                      (throw "syntax error")
+                      (let ((match ((caar rewrite))))
+                        (if match
+                          ((cdar rewrite) match)
+                          (loop (cdr rewrite)))))))))))))
 
