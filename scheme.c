@@ -4084,7 +4084,7 @@ static pointer opexe_4(scheme *sc, enum scheme_opcodes op) {
 #if USE_PLIST
   case OP_PLISTPUT:        /* property-put */
     if (!hasprop(car(sc->args)) || !hasprop(cadr(sc->args))) {
-      Error_0(sc, "illegal use of put");
+      Error_0(sc, "illegal use of property-put");
     }
     for (x = symprop(car(sc->args)), y = cadr(sc->args); x != sc->NIL; x = cdr(x)) {
       if (caar(x) == y) {
@@ -4100,7 +4100,7 @@ static pointer opexe_4(scheme *sc, enum scheme_opcodes op) {
     
   case OP_PLISTGET:        /* property-get */
     if (!hasprop(car(sc->args)) || !hasprop(cadr(sc->args))) {
-      Error_0(sc, "illegal use of get");
+      Error_0(sc, "illegal use of property-get");
     }
     for (x = symprop(car(sc->args)), y = cadr(sc->args); x != sc->NIL; x = cdr(x)) {
       if (caar(x) == y) {
@@ -4112,7 +4112,14 @@ static pointer opexe_4(scheme *sc, enum scheme_opcodes op) {
     } else {
       s_return(sc, sc->NIL);
     }
-  #endif /* USE_PLIST */
+
+  case OP_PLISTGETLIST:    /* get-properties */
+    if (!hasprop(car(sc->args))) {
+      Error_0(sc, "illegal use of get-properties");
+    }
+    s_return(sc, symprop(car(sc->args)));
+#endif /* USE_PLIST */
+
   case OP_QUIT:       /* quit */
     if (is_pair(sc->args)) {
       sc->retcode=ivalue(car(sc->args));

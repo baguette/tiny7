@@ -154,6 +154,7 @@
 #if USE_PLIST
     _OP_DEF(opexe_4, "property-put",                   3,  3,       TST_NONE,                        OP_PLISTPUT         )
     _OP_DEF(opexe_4, "property-get",                   2,  2,       TST_NONE,                        OP_PLISTGET         )
+    _OP_DEF(opexe_4, "get-properties",                 1,  1,       TST_NONE,                        OP_PLISTGETLIST     )
 #endif
     _OP_DEF(opexe_4, "quit",                           0,  1,       TST_NUMBER,                      OP_QUIT             )
     _OP_DEF(opexe_4, "gc",                             0,  0,       0,                               OP_GC               )
