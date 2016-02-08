@@ -40,6 +40,20 @@ extern "C" {
 # define USE_COLON_HOOK 0
 # define USE_DL 0
 # define USE_PLIST 0
+# define SHOW_ERROR_LINE 0
+#endif
+
+#if USE_ALL_FEATURES
+# define USE_MATH 1
+# define USE_CHAR_CLASSIFIERS 1
+# define USE_ASCII_NAMES 1
+# define USE_STRING_PORTS 1
+# define USE_ERROR_HOOK 1
+# define USE_TRACING 1
+# define USE_COLON_HOOK 1
+# define USE_DL 1
+# define USE_PLIST 1
+# define SHOW_ERROR_LINE 1
 #endif
 
 /*
@@ -222,14 +236,13 @@ struct scheme_interface {
 #endif
 
 #if !STANDALONE
-typedef struct scheme_registerable
-{
-  foreign_func  f;
-  const char *  name;
-}
-scheme_registerable;
+typedef struct scheme_registerable {
+  foreign_func f;
+  const char   *name;
+} scheme_registerable;
 
-void scheme_register_foreign_func_list(scheme * sc,
+void scheme_register_foreign_func_list(
+  scheme * sc,
   scheme_registerable * list,
   int n);
 

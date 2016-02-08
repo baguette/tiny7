@@ -32,21 +32,21 @@
 
 ;;;; Utility to ease macro creation
 (define (macro-expand form)
-     ((eval (get-closure-code (eval (car form)))) form))
+  ((eval (get-closure-code (eval (car form)))) form))
 
 (define (macro-expand-all form)
    (if (macro? form)
-      (macro-expand-all (macro-expand form))
-      form))
+     (macro-expand-all (macro-expand form))
+     form))
 
 (define *compile-hook* macro-expand-all)
 
 
 (define-syntax (unless form)
-     `(if (not ,(cadr form)) (begin ,@(cddr form))))
+  `(if (not ,(cadr form)) (begin ,@(cddr form))))
 
 (define-syntax (when form)
-     `(if ,(cadr form) (begin ,@(cddr form))))
+  `(if ,(cadr form) (begin ,@(cddr form))))
 
 ; DEFINE-MACRO Contributed by Andy Gaynor
 (define-syntax (define-macro dform)
@@ -94,8 +94,8 @@
       (let ((aa (abs (car a)))
             (bb (abs (cadr a))))
          (if (= bb 0)
-              aa
-              (gcd bb (remainder aa bb)))))))
+           aa
+           (gcd bb (remainder aa bb)))))))
 (define lcm
   (lambda a
     (if (null? a)
@@ -108,57 +108,57 @@
 
 
 (define (string . charlist)
-     (list->string charlist))
+  (list->string charlist))
 
 (define (list->string charlist)
-     (let* ((len (length charlist))
-            (newstr (make-string len))
-            (fill-string!
-               (lambda (str i len charlist)
-                    (if (= i len)
-                         str
-                         (begin (string-set! str i (car charlist))
-                         (fill-string! str (+ i 1) len (cdr charlist)))))))
-          (fill-string! newstr 0 len charlist)))
+  (let* ((len (length charlist))
+         (newstr (make-string len))
+         (fill-string!
+           (lambda (str i len charlist)
+             (if (= i len)
+               str
+               (begin (string-set! str i (car charlist))
+               (fill-string! str (+ i 1) len (cdr charlist)))))))
+     (fill-string! newstr 0 len charlist)))
 
 (define (string-fill! s e)
-     (let ((n (string-length s)))
-          (let loop ((i 0))
-               (if (= i n)
-                    s
-                    (begin (string-set! s i e) (loop (succ i)))))))
+  (let ((n (string-length s)))
+    (let loop ((i 0))
+      (if (= i n)
+        s
+        (begin (string-set! s i e) (loop (succ i)))))))
 
 (define (string->list s)
-     (let loop ((n (pred (string-length s))) (l '()))
-          (if (= n -1)
-               l
-               (loop (pred n) (cons (string-ref s n) l)))))
+  (let loop ((n (pred (string-length s))) (l '()))
+    (if (= n -1)
+      l
+      (loop (pred n) (cons (string-ref s n) l)))))
 
 (define (string-copy str)
-     (string-append str))
+  (string-append str))
 
 (define (string->anyatom str pred)
-     (let* ((a (string->atom str)))
-       (if (pred a) a
-         (error "string->xxx: not a xxx" a))))
+  (let* ((a (string->atom str)))
+    (if (pred a) a
+      (error "string->xxx: not a xxx" a))))
 
 (define (string->number str . base)
-    (let ((n (string->atom str (if (null? base) 10 (car base)))))
-        (if (number? n) n #f)))
+  (let ((n (string->atom str (if (null? base) 10 (car base)))))
+    (if (number? n) n #f)))
 
 (define (anyatom->string n pred)
   (if (pred n)
-      (atom->string n)
-      (error "xxx->string: not a xxx" n)))
+    (atom->string n)
+    (error "xxx->string: not a xxx" n)))
 
 (define (number->string n . base)
-    (atom->string n (if (null? base) 10 (car base))))
+  (atom->string n (if (null? base) 10 (car base))))
 
 
 (define (char-cmp? cmp a b)
-     (cmp (char->integer a) (char->integer b)))
+  (cmp (char->integer a) (char->integer b)))
 (define (char-ci-cmp? cmp a b)
-     (cmp (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+  (cmp (char->integer (char-downcase a)) (char->integer (char-downcase b))))
 
 (define (char=? a b) (char-cmp? = a b))
 (define (char<? a b) (char-cmp? < a b))
@@ -174,17 +174,18 @@
 
 ; Note the trick of returning (cmp x y)
 (define (string-cmp? chcmp cmp a b)
-     (let ((na (string-length a)) (nb (string-length b)))
-          (let loop ((i 0))
-               (cond
-                    ((= i na)
-                         (if (= i nb) (cmp 0 0) (cmp 0 1)))
-                    ((= i nb)
-                         (cmp 1 0))
-                    ((chcmp = (string-ref a i) (string-ref b i))
-                         (loop (succ i)))
-                    (else
-                         (chcmp cmp (string-ref a i) (string-ref b i)))))))
+  (let ((na (string-length a))
+        (nb (string-length b)))
+    (let loop ((i 0))
+      (cond
+        ((= i na)
+          (if (= i nb) (cmp 0 0) (cmp 0 1)))
+        ((= i nb)
+          (cmp 1 0))
+        ((chcmp = (string-ref a i) (string-ref b i))
+          (loop (succ i)))
+        (else
+          (chcmp cmp (string-ref a i) (string-ref b i)))))))
 
 
 (define (string=? a b) (string-cmp? char-cmp? = a b))
@@ -202,84 +203,89 @@
 (define (list . x) x)
 
 (define (foldr f x lst)
-     (if (null? lst)
-          x
-          (foldr f (f x (car lst)) (cdr lst))))
+  (if (null? lst)
+    x
+    (foldr f (f x (car lst)) (cdr lst))))
 
 (define (unzip1-with-cdr . lists)
   (unzip1-with-cdr-iterative lists '() '()))
 
 (define (unzip1-with-cdr-iterative lists cars cdrs)
   (if (null? lists)
-      (cons cars cdrs)
-      (let ((car1 (caar lists))
-            (cdr1 (cdar lists)))
-        (unzip1-with-cdr-iterative
-          (cdr lists)
-          (append cars (list car1))
-          (append cdrs (list cdr1))))))
+    (cons cars cdrs)
+    (let ((car1 (caar lists))
+          (cdr1 (cdar lists)))
+      (unzip1-with-cdr-iterative
+        (cdr lists)
+        (append cars (list car1))
+        (append cdrs (list cdr1))))))
 
 (define (map proc . lists)
   (if (null? lists)
-      (apply proc)
-      (if (null? (car lists))
-        '()
-        (let* ((unz (apply unzip1-with-cdr lists))
-               (cars (car unz))
-               (cdrs (cdr unz)))
-          (cons (apply proc cars) (apply map (cons proc cdrs)))))))
+    (apply proc)
+    (if (null? (car lists))
+      '()
+      (let* ((unz (apply unzip1-with-cdr lists))
+             (cars (car unz))
+             (cdrs (cdr unz)))
+        (cons (apply proc cars) (apply map (cons proc cdrs)))))))
 
 (define (for-each proc . lists)
   (if (null? lists)
-      (apply proc)
-      (if (null? (car lists))
-        #t
-        (let* ((unz (apply unzip1-with-cdr lists))
-               (cars (car unz))
-               (cdrs (cdr unz)))
-          (apply proc cars) (apply map (cons proc cdrs))))))
+    (apply proc)
+    (if (null? (car lists))
+      #t
+      (let* ((unz (apply unzip1-with-cdr lists))
+             (cars (car unz))
+             (cdrs (cdr unz)))
+        (apply proc cars)
+        (apply map (cons proc cdrs))))))
 
 (define (list-tail x k)
-    (if (zero? k)
-        x
-        (list-tail (cdr x) (- k 1))))
+  (if (zero? k)
+    x
+    (list-tail (cdr x) (- k 1))))
 
 (define (list-ref x k)
-    (car (list-tail x k)))
+  (car (list-tail x k)))
 
 (define (last-pair x)
-    (if (pair? (cdr x))
-        (last-pair (cdr x))
-        x))
+  (if (pair? (cdr x))
+    (last-pair (cdr x))
+    x))
 
 (define (head stream) (car stream))
 
 (define (tail stream) (force (cdr stream)))
 
 (define (vector-equal? x y)
-     (and (vector? x) (vector? y) (= (vector-length x) (vector-length y))
-          (let ((n (vector-length x)))
-               (let loop ((i 0))
-                    (if (= i n)
-                         #t
-                         (and (equal? (vector-ref x i) (vector-ref y i))
-                              (loop (succ i))))))))
+  (and (vector? x)
+       (vector? y)
+       (= (vector-length x)
+       (vector-length y))
+       (let ((n (vector-length x)))
+         (let loop ((i 0))
+           (if (= i n)
+             #t
+             (and (equal? (vector-ref x i) (vector-ref y i))
+                  (loop (succ i))))))))
 
 (define (list->vector x)
-     (apply vector x))
+  (apply vector x))
 
 (define (vector-fill! v e)
-     (let ((n (vector-length v)))
-          (let loop ((i 0))
-               (if (= i n)
-                    v
-                    (begin (vector-set! v i e) (loop (succ i)))))))
+  (let ((n (vector-length v)))
+    (let loop ((i 0))
+      (if (= i n)
+        v
+        (begin (vector-set! v i e)
+               (loop (succ i)))))))
 
 (define (vector->list v)
-     (let loop ((n (pred (vector-length v))) (l '()))
-          (if (= n -1)
-               l
-               (loop (pred n) (cons (vector-ref v n) l)))))
+  (let loop ((n (pred (vector-length v))) (l '()))
+    (if (= n -1)
+      l
+      (loop (pred n) (cons (vector-ref v n) l)))))
 
 ;; The following quasiquote macro is due to Eric S. Tiedemann.
 ;;   Copyright 1988 by Eric S. Tiedemann; all rights reserved.
@@ -341,24 +347,22 @@
 
 ;;;;;Helper for the dynamic-wind definition.  By Tom Breton (Tehom)
 (define (shared-tail x y)
-   (let ((len-x (length x))
-         (len-y (length y)))
-      (define (shared-tail-helper x y)
-         (if
-            (eq? x y)
-            x
-            (shared-tail-helper (cdr x) (cdr y))))
-
-      (cond
-         ((> len-x len-y)
-            (shared-tail-helper
-               (list-tail x (- len-x len-y))
-               y))
-         ((< len-x len-y)
-            (shared-tail-helper
-               x
-               (list-tail y (- len-y len-x))))
-         (#t (shared-tail-helper x y)))))
+  (let ((len-x (length x))
+        (len-y (length y)))
+    (define (shared-tail-helper x y)
+      (if (eq? x y)
+        x
+        (shared-tail-helper (cdr x) (cdr y))))
+    (cond
+      ((> len-x len-y)
+        (shared-tail-helper
+           (list-tail x (- len-x len-y))
+           y))
+      ((< len-x len-y)
+        (shared-tail-helper
+          x
+          (list-tail y (- len-y len-x))))
+      (#t (shared-tail-helper x y)))))
 
 ;;;;;Dynamic-wind by Tom Breton (Tehom)
 
@@ -458,16 +462,16 @@
 
 ;;;;    equal?
 (define (equal? x y)
-     (cond
-          ((pair? x)
-               (and (pair? y)
-                    (equal? (car x) (car y))
-                    (equal? (cdr x) (cdr y))))
-          ((vector? x)
-               (and (vector? y) (vector-equal? x y)))
-          ((string? x)
-               (and (string? y) (string=? x y)))
-          (else (eqv? x y))))
+  (cond
+    ((pair? x)
+      (and (pair? y)
+           (equal? (car x) (car y))
+           (equal? (cdr x) (cdr y))))
+    ((vector? x)
+      (and (vector? y) (vector-equal? x y)))
+    ((string? x)
+      (and (string? y) (string=? x y)))
+    (else (eqv? x y))))
 
 ;;;; (do ((var init inc) ...) (endtest result ...) body ...)
 ;;
@@ -498,41 +502,42 @@
                         `,vars)))))
       do-macro)))
 
-;;;; generic-member
-(define (generic-member cmp obj lst)
-  (cond
-    ((null? lst) #f)
-    ((cmp obj (car lst)) lst)
-    (else (generic-member cmp obj (cdr lst)))))
+(define (member obj lst . cmp)
+  (let ((cmp? (if (null? cmp)
+                equal?
+                (car cmp))))
+    (cond
+      ((null? lst) #f)
+      ((cmp? obj (car lst)) lst)
+      (else (member obj (cdr lst) cmp?))))
 
 (define (memq obj lst)
-     (generic-member eq? obj lst))
+  (member obj lst eq?))
 (define (memv obj lst)
-     (generic-member eqv? obj lst))
-(define (member obj lst)
-     (generic-member equal? obj lst))
+  (member obj lst eqv?))
 
-;;;; generic-assoc
-(define (generic-assoc cmp obj alst)
-     (cond
-          ((null? alst) #f)
-          ((cmp obj (caar alst)) (car alst))
-          (else (generic-assoc cmp obj (cdr alst)))))
+(define (assoc obj alst . cmp)
+  (let ((cmp? (if (null? cmp)
+                equal?
+                (car cmp))))
+  (cond
+    ((null? alst) #f)
+    ((not (pair? (car alst))) (error "assoc: not an alist"))
+    ((cmp? obj (caar alst)) (car alst))
+    (else (assoc obj (cdr alst) cmp?)))))
 
 (define (assq obj alst)
-     (generic-assoc eq? obj alst))
+  (generic-assoc obj alst eq?))
 (define (assv obj alst)
-     (generic-assoc eqv? obj alst))
-(define (assoc obj alst)
-     (generic-assoc equal? obj alst))
+  (generic-assoc obj alst eqv?))
 
 (define (acons x y z) (cons (cons x y) z))
 
 ;;;; Handy for imperative programs
 ;;;; Used as: (define-with-return (foo x y) .... (return z) ...)
 (define-syntax (define-with-return form)
-     `(define ,(cadr form)
-          (call/cc (lambda (return) ,@(cddr form)))))
+  `(define ,(cadr form)
+    (call/cc (lambda (return) ,@(cddr form)))))
 
 ;;;; Simple exception handling
 ;
@@ -554,28 +559,28 @@
 (define *handlers* (list))
 
 (define (push-handler proc)
-     (set! *handlers* (cons proc *handlers*)))
+  (set! *handlers* (cons proc *handlers*)))
 
 (define (pop-handler)
-     (let ((h (car *handlers*)))
-          (set! *handlers* (cdr *handlers*))
-          h))
+  (let ((h (car *handlers*)))
+    (set! *handlers* (cdr *handlers*))
+    h))
 
 (define (more-handlers?)
-     (pair? *handlers*))
+  (pair? *handlers*))
 
 (define (throw . x)
-     (if (more-handlers?)
-          (apply (pop-handler))
-          (apply error x)))
+  (if (more-handlers?)
+    (apply (pop-handler))
+    (apply error x)))
 
 (define-syntax (catch form)
-     (let ((label (gensym)))
-          `(call/cc (lambda (exit)
-               (push-handler (lambda () (exit ,(cadr form))))
-               (let ((,label (begin ,@(cddr form))))
-                    (pop-handler)
-                    ,label)))))
+  (let ((label (gensym)))
+    `(call/cc (lambda (exit)
+                (push-handler (lambda () (exit ,(cadr form))))
+                (let ((,label (begin ,@(cddr form))))
+                  (pop-handler)
+                  ,label)))))
 
 (define *error-hook* throw)
 
@@ -583,9 +588,9 @@
 ;;;;; Definition of MAKE-ENVIRONMENT, to be used with two-argument EVAL
 
 (define-syntax (make-environment form)
-     `(apply (lambda ()
-               ,@(cdr form)
-               (current-environment))))
+  `(apply (lambda ()
+            ,@(cdr form)
+            (current-environment))))
 
 (define-syntax (eval-polymorphic x . envl)
   (display envl)
@@ -602,82 +607,87 @@
 ;;;;; I/O
 
 (define (input-output-port? p)
-     (and (input-port? p) (output-port? p)))
+  (and (input-port? p)
+       (output-port? p)))
 
 (define (close-port p)
-     (cond
-          ((input-output-port? p) (close-input-port (close-output-port p)))
-          ((input-port? p) (close-input-port p))
-          ((output-port? p) (close-output-port p))
-          (else (throw "Not a port" p))))
+  (cond
+    ((input-output-port? p) (close-input-port (close-output-port p)))
+    ((input-port? p) (close-input-port p))
+    ((output-port? p) (close-output-port p))
+    (else (throw "Not a port" p))))
 
 (define (call-with-input-file s p)
-     (let ((inport (open-input-file s)))
-          (if (eq? inport #f)
-               #f
-               (let ((res (p inport)))
-                    (close-input-port inport)
-                    res))))
+  (let ((inport (open-input-file s)))
+    (if (eq? inport #f)
+      #f
+      (let ((res (p inport)))
+        (close-input-port inport)
+        res))))
 
 (define (call-with-output-file s p)
-     (let ((outport (open-output-file s)))
-          (if (eq? outport #f)
-               #f
-               (let ((res (p outport)))
-                    (close-output-port outport)
-                    res))))
+  (let ((outport (open-output-file s)))
+    (if (eq? outport #f)
+      #f
+      (let ((res (p outport)))
+        (close-output-port outport)
+        res))))
 
 (define (with-input-from-file s p)
-     (let ((inport (open-input-file s)))
-          (if (eq? inport #f)
-               #f
-               (let ((prev-inport (current-input-port)))
-                    (set-input-port inport)
-                    (let ((res (p)))
-                         (close-input-port inport)
-                         (set-input-port prev-inport)
-                         res)))))
+  (let ((inport (open-input-file s)))
+    (if (eq? inport #f)
+      #f
+      (let ((prev-inport (current-input-port)))
+        (set-input-port inport)
+        (let ((res (p)))
+          (close-input-port inport)
+          (set-input-port prev-inport)
+          res)))))
 
 (define (with-output-to-file s p)
-     (let ((outport (open-output-file s)))
-          (if (eq? outport #f)
-               #f
-               (let ((prev-outport (current-output-port)))
-                    (set-output-port outport)
-                    (let ((res (p)))
-                         (close-output-port outport)
-                         (set-output-port prev-outport)
-                         res)))))
+  (let ((outport (open-output-file s)))
+    (if (eq? outport #f)
+      #f
+      (let ((prev-outport (current-output-port)))
+        (set-output-port outport)
+        (let ((res (p)))
+          (close-output-port outport)
+          (set-output-port prev-outport)
+          res)))))
 
 (define (with-input-output-from-to-files si so p)
-     (let ((inport (open-input-file si))
-           (outport (open-input-file so)))
-          (if (not (and inport outport))
-               (begin
-                    (close-input-port inport)
-                    (close-output-port outport)
-                    #f)
-               (let ((prev-inport (current-input-port))
-                     (prev-outport (current-output-port)))
-                    (set-input-port inport)
-                    (set-output-port outport)
-                    (let ((res (p)))
-                         (close-input-port inport)
-                         (close-output-port outport)
-                         (set-input-port prev-inport)
-                         (set-output-port prev-outport)
-                         res)))))
+  (let ((inport (open-input-file si))
+        (outport (open-input-file so)))
+    (if (not (and inport outport))
+      (begin
+        (close-input-port inport)
+        (close-output-port outport)
+        #f)
+      (let ((prev-inport (current-input-port))
+            (prev-outport (current-output-port)))
+        (set-input-port inport)
+        (set-output-port outport)
+        (let ((res (p)))
+          (close-input-port inport)
+          (close-output-port outport)
+          (set-input-port prev-inport)
+          (set-output-port prev-outport)
+          res)))))
 
 ; Random number generator (maximum cycle)
 (define *seed* 1)
 (define (random-next)
-     (let* ((a 16807) (m 2147483647) (q (quotient m a)) (r (modulo m a)))
-          (set! *seed*
-               (-   (* a (- *seed*
-                         (* (quotient *seed* q) q)))
-                    (* (quotient *seed* q) r)))
-          (if (< *seed* 0) (set! *seed* (+ *seed* m)))
-          *seed*))
+  (let* ((a 16807)
+         (m 2147483647)
+         (q (quotient m a))
+         (r (modulo m a)))
+    (set! *seed*
+      (- (* a (- *seed*
+              (* (quotient *seed* q) q)))
+         (* (quotient *seed* q) r)))
+    (when (< *seed* 0)
+      (set! *seed* (+ *seed* m)))
+    *seed*))
 ;; SRFI-0
 ;; COND-EXPAND
 ;; Implemented as a macro
@@ -688,10 +698,10 @@
 
 (define (cond-expand-runtime cond-action-list)
   (if (null? cond-action-list)
-      #t
-      (if (cond-eval (caar cond-action-list))
-          `(begin ,@(cdar cond-action-list))
-          (cond-expand-runtime (cdr cond-action-list)))))
+    #t
+    (if (cond-eval (caar cond-action-list))
+      `(begin ,@(cdar cond-action-list))
+      (cond-expand-runtime (cdr cond-action-list)))))
 
 (define (cond-eval-and cond-list)
   (foldr (lambda (x y) (and (cond-eval x) (cond-eval y))) #t cond-list))
@@ -712,6 +722,25 @@
                      (error "cond-expand : 'not' takes 1 argument")
                      (not (cond-eval (cadr condition)))))
             (else (error "cond-expand : unknown operator" (car condition)))))))
+
+;; Some stuff from SRFI-1 needed by syntax-rules
+(define (drop-right xs i)
+  (let* ((len  (length xs))
+         (rlen (- len i))
+         (rvec (make-vector rlen)))
+    (do ((j 0 (+ 1 j))) ((= j rlen) (vector->list rvec))
+      (vector-set! rvec j (car xs))
+      (set! xs (cdr xs)))))
+
+(define (drop xs i)
+  (if (<= i 0)
+    xs
+    (drop (cdr xs) (- i 1))))
+
+(define (take-right xs i)
+  (let ((len (length xs)))
+    (drop xs (- len i))))
+      
 
 ;; Explicit renaming macro transformer
 ;; Adapted from expand.scm of Chicken Scheme 4.10.0

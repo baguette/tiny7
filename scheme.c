@@ -2388,8 +2388,8 @@ static pointer _Error_1(scheme *sc, const char *s, pointer a) {
   char sbuf[STRBUFFSIZE];
 
   /* make sure error is not in REPL */
-  if (sc->load_stack[sc->file_i].kind & port_file &&
-    sc->load_stack[sc->file_i].rep.stdio.file != stdin) {
+  if (sc->load_stack[sc->file_i].kind & port_file
+  /*&&  sc->load_stack[sc->file_i].rep.stdio.file != stdin*/) {
   int ln = sc->load_stack[sc->file_i].rep.stdio.curr_line;
     const char *fname = sc->load_stack[sc->file_i].rep.stdio.filename;
   
@@ -2787,14 +2787,14 @@ case OP_REAL_APPLY:
     /* If the hook is defined, apply it to sc->code, otherwise
       set sc->value fall thru */
     {
-      pointer f=find_slot_in_env(sc, sc->envir, sc->COMPILE_HOOK, 1);
+      pointer f = find_slot_in_env(sc, sc->envir, sc->COMPILE_HOOK, 1);
       if (f == sc->NIL) {
         sc->value = sc->code;
         /* Fallthru */
       } else {
         s_save(sc, OP_LAMBDA1, sc->args, sc->code);
-        sc->args=cons(sc, sc->code, sc->NIL);
-        sc->code=slot_value_in_env(f);
+        sc->args = cons(sc, sc->code, sc->NIL);
+        sc->code = slot_value_in_env(f);
         s_goto(sc, OP_APPLY);
       }
     }
@@ -4882,6 +4882,9 @@ int scheme_init_custom_alloc(scheme *sc, func_alloc malloc, func_dealloc free) {
   sc->c_nest = sc->NIL;
 
   sc->oblist = oblist_initial_value(sc);
+  /* init line definition dictionary */
+  new_frame_in_env(sc, sc->NIL);
+  sc->lambda_lines = sc->envir;
   /* init global_env */
   new_frame_in_env(sc, sc->NIL);
   sc->global_env = sc->envir;
