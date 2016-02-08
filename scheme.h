@@ -120,11 +120,11 @@ typedef void (*func_dealloc)(void *);
 
 /* num, for generic arithmetic */
 typedef struct num {
-     char is_fixnum;
-     union {
-          long ivalue;
-          double rvalue;
-     } value;
+  char is_fixnum;
+  union {
+    long ivalue;
+    double rvalue;
+  } value;
 } num;
 
 SCHEME_EXPORT scheme *scheme_init_new();
@@ -236,8 +236,8 @@ typedef struct scheme_registerable
 scheme_registerable;
 
 void scheme_register_foreign_func_list(scheme * sc,
-                                       scheme_registerable * list,
-                                       int n);
+  scheme_registerable * list,
+  int n);
 
 #endif /* !STANDALONE */
 

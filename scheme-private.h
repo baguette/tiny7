@@ -27,10 +27,10 @@ typedef struct port {
     struct {
       FILE *file;
       int closeit;
-#if SHOW_ERROR_LINE
+    #if SHOW_ERROR_LINE
       int curr_line;
       char *filename;
-#endif
+    #endif
     } stdio;
     struct {
       char *start;
