@@ -51,6 +51,7 @@
 #define TOK_BYTEVEC 13
 #define TOK_DATUMCOMMENT 14
 #define TOK_PIPE    15
+#define TOK_ERROR   16
 
 #define BACKQUOTE '`'
 #define DELIMITERS  "()\";\f\t\v\n\r "
@@ -145,6 +146,10 @@ static INLINE int num_is_integer(pointer p) {
 
 static num num_zero;
 static num num_one;
+
+/* used for error reporting */
+static pointer _Error_1(scheme *sc, const char *s, pointer a);
+
 
 /* macros for cell operations */
 #define typeflag(p)      ((p)->_flag)
@@ -1906,8 +1911,8 @@ static int token(scheme *sc) {
         } else if (strcmp(directive, "no-fold-case") == 0) {
           sc->load_stack[sc->file_i].fold_case = 0;
         } else {
-          fprintf(stderr, "Error:  unknown directive #!%s\n", directive);
-          return (TOK_EOF);
+          _Error_1(sc, "unknown directive", mk_string(sc, directive));
+          return (TOK_ERROR);
         }
         
       #if SHOW_ERROR_LINE
@@ -2624,8 +2629,9 @@ static pointer opexe_0(scheme *sc, enum scheme_opcodes op) {
   
   case OP_READ_INTERNAL:       /* internal read */
     sc->tok = token(sc);
-    if (sc->tok == TOK_EOF)
-  { s_return(sc, sc->EOF_OBJ); }
+    if (sc->tok == TOK_EOF) {
+      s_return(sc, sc->EOF_OBJ);
+    }
     s_goto(sc, OP_RDSEXPR);
   
   case OP_GENSYM:
@@ -2636,7 +2642,7 @@ static pointer opexe_0(scheme *sc, enum scheme_opcodes op) {
       non-interactive to interactive mode, it needs to be
       already on the stack */
     if (sc->tracing) {
-  putstr(sc, "\nGives: ");
+      putstr(sc, "\nGives: ");
     }
     if (file_interactive(sc)) {
       sc->print_flag = 1;
@@ -4201,6 +4207,8 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
   
   case OP_RDSEXPR:
     switch (sc->tok) {
+    case TOK_ERROR:
+      s_goto(sc, OP_ERR0);
     case TOK_EOF:
       s_return(sc, sc->EOF_OBJ);
     /* NOTREACHED */
