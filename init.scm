@@ -534,6 +534,13 @@
 
 (define (acons x y z) (cons (cons x y) z))
 
+(define (filter p? xs)
+  (if (null? xs)
+    '()
+    (if (p? (car xs))
+      (cons (car xs) (filter p? (cdr xs)))
+      (filter p? (cdr xs)))))
+
 ;;;; Handy for imperative programs
 ;;;; Used as: (define-with-return (foo x y) .... (return z) ...)
 (define-syntax (define-with-return form)
