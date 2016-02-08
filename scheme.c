@@ -1844,6 +1844,8 @@ static INLINE int skipspace(scheme *sc) {
 /* get token */
 static int token(scheme *sc) {
   int c;
+  int comment_depth = 0;
+
   c = skipspace(sc);
   if (c == EOF) {
     return (TOK_EOF);
@@ -1904,6 +1906,23 @@ static int token(scheme *sc) {
         }
       } else if (c == ';') {
         return (TOK_DATUMCOMMENT);
+      } else if (c == '|') {       /* nestable block comments */
+        comment_depth++;
+        while (comment_depth) {
+          c = inchar(sc);
+          if (c == '#') {
+            c = inchar(sc);
+            if (c == '|') {
+              comment_depth++;
+            }
+          } else if (c == '|') {
+            c = inchar(sc);
+            if (c == '#') {
+              comment_depth--;
+            }
+          }
+        }
+        return (token(sc));
       } else if (c == '!') {
         char *directive = readstr_upto(sc, "\r\n");
         if (strcmp(directive, "fold-case") == 0) {
