@@ -198,6 +198,7 @@
     _OP_DEF(opexe_6, "length",                         1,  1,       TST_LIST,                        OP_LIST_LENGTH      )
     _OP_DEF(opexe_6, "assq",                           2,  2,       TST_NONE,                        OP_ASSQ             )
     _OP_DEF(opexe_6, "get-closure-code",               1,  1,       TST_NONE,                        OP_GET_CLOSURE      )
+    _OP_DEF(opexe_6, "get-closure-environment",        1,  1,       TST_NONE,                        OP_GET_CLOSURE_ENV  )
     _OP_DEF(opexe_6, "closure?",                       1,  1,       TST_NONE,                        OP_CLOSUREP         )
     _OP_DEF(opexe_6, "macro?",                         1,  1,       TST_NONE,                        OP_MACROP           )
 #undef _OP_DEF

@@ -43,19 +43,6 @@ extern "C" {
 # define SHOW_ERROR_LINE 0
 #endif
 
-#if USE_ALL_FEATURES
-# define USE_MATH 1
-# define USE_CHAR_CLASSIFIERS 1
-# define USE_ASCII_NAMES 1
-# define USE_STRING_PORTS 1
-# define USE_ERROR_HOOK 1
-# define USE_TRACING 1
-# define USE_COLON_HOOK 1
-# define USE_DL 1
-# define USE_PLIST 1
-# define SHOW_ERROR_LINE 1
-#endif
-
 /*
  * Leave it defined if you want continuations, and also for the Sharp Zaurus.
  * Undefine it if you only care about faster speed and not strict Scheme compatibility.

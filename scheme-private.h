@@ -127,7 +127,7 @@ struct scheme {
   int nesting_stack[MAXFIL];
   int file_i;
   int nesting;
-  
+
   char    gc_verbose;      /* if gc_verbose is not zero, print gc status */
   char    no_memory;       /* Whether mem. alloc. has failed */
   

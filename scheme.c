@@ -2381,7 +2381,7 @@ static pointer _Error_1(scheme *sc, const char *s, pointer a) {
   const char *str = s;
 #if USE_ERROR_HOOK
   pointer x;
-  pointer hdl=sc->ERROR_HOOK;
+  pointer hdl = sc->ERROR_HOOK;
 #endif
 
 #if SHOW_ERROR_LINE
@@ -2389,10 +2389,10 @@ static pointer _Error_1(scheme *sc, const char *s, pointer a) {
 
   /* make sure error is not in REPL */
   if (sc->load_stack[sc->file_i].kind & port_file
-  /*&&  sc->load_stack[sc->file_i].rep.stdio.file != stdin*/) {
-  int ln = sc->load_stack[sc->file_i].rep.stdio.curr_line;
+  &&  sc->load_stack[sc->file_i].rep.stdio.file != stdin) {
+    int ln = sc->load_stack[sc->file_i].rep.stdio.curr_line;
     const char *fname = sc->load_stack[sc->file_i].rep.stdio.filename;
-  
+
     /* should never happen */
     if (!fname) fname = "<unknown>";
   
@@ -2402,6 +2402,7 @@ static pointer _Error_1(scheme *sc, const char *s, pointer a) {
   
     str = (const char*)sbuf;
   }
+
 #endif
 
 #if USE_ERROR_HOOK
@@ -2689,8 +2690,9 @@ case OP_REAL_EVAL:
     if (is_macro(sc->value)) {    /* macro expansion */
       s_save(sc, OP_DOMACRO, sc->NIL, sc->NIL);
 
-      /* TODO: save macro definition environment and pass instead of
-       *       global_env
+      /* TODO Pass in the actual definition environment
+       *      rather than the global environment...
+       *      (will `cdr(sc->value)` work? ...)
        */
       sc->args = cons(sc, sc->code,                        /* form */
                    cons(sc, sc->envir,                     /* use-env */
@@ -2738,19 +2740,20 @@ case OP_REAL_APPLY:
 #endif
   if (is_proc(sc->code)) {
     s_goto(sc, procnum(sc->code));   /* PROCEDURE */
-  } else if (is_foreign(sc->code))
-    {
-      /* Keep nested calls from GC'ing the arglist */
-      push_recent_alloc(sc, sc->args, sc->NIL);
-        x=sc->code->_object._ff(sc, sc->args);
-        s_return(sc, x);
-      } else if (is_closure(sc->code) || is_macro(sc->code)
-    || is_promise(sc->code)) { /* CLOSURE */
-  /* Should not accept promise */
+  } else if (is_foreign(sc->code)) {
+    /* Keep nested calls from GC'ing the arglist */
+    push_recent_alloc(sc, sc->args, sc->NIL);
+    x = sc->code->_object._ff(sc, sc->args);
+    s_return(sc, x);
+  } else if (is_closure(sc->code)
+         ||  is_macro(sc->code)
+         ||  is_promise(sc->code)) { /* CLOSURE */
+    /* Should not accept promise */
     /* make environment */
     new_frame_in_env(sc, closure_env(sc->code));
     for (x = car(closure_code(sc->code)), y = sc->args;
-      is_pair(x); x = cdr(x), y = cdr(y)) {
+         is_pair(x);
+         x = cdr(x), y = cdr(y)) {
       if (y == sc->NIL) {
         Error_0(sc, "not enough arguments");
       } else {
@@ -2763,9 +2766,9 @@ case OP_REAL_APPLY:
         *   Error_0(sc, "too many arguments");
         * }
         */
-      } else if (is_symbol(x))
+    } else if (is_symbol(x)) {
       new_slot_in_env(sc, x, y);
-    else {
+    } else {
       Error_1(sc, "syntax error in closure: not a symbol:", x);
     }
     sc->code = cdr(closure_code(sc->code));
@@ -2775,7 +2778,7 @@ case OP_REAL_APPLY:
     sc->dump = cont_dump(sc->code);
     s_return(sc, sc->args != sc->NIL ? car(sc->args) : sc->NIL);
   } else {
-    Error_0(sc, "illegal function");
+    Error_1(sc, "not a function:", sc->code);
   }
 
   case OP_DOMACRO:    /* do macro */
@@ -4497,6 +4500,14 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
     } else {
       s_return(sc, sc->F);
     }
+  case OP_GET_CLOSURE_ENV:
+    sc->args = car(sc->args);
+    if (sc->args == sc->NIL) {
+      s_return(sc, sc->F);
+    } else {
+      s_return(sc, closure_env(sc->value));
+    }
+      
   case OP_CLOSUREP:        /* closure? */
     /*
       * Note, macro object is also a closure.
