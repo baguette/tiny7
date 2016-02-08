@@ -1,25 +1,47 @@
 ;;; 'expand-syntax adapted from "Scheme 9 From Empty Space" by Nils M. Holm
 ;;; TODO Adaptation for Tiny7 is a work in progress
 
+(define *debug* #f)
+
+(define (print . args)
+  (for-each (lambda (arg)
+              (write arg)
+              (display " "))
+            args)
+  (newline))
+
+(define (info . args)
+  (when *debug*
+    (apply print args)))
+
+;----------------------------------------------------------------------------
+
 (define (syntax->list syn)
+  (info 'syntax->list)
   (cond ((not (pair? syn)) #f)
         ((not (eq? '!<syntax-rules> (car syn))) #f)
         (else (cdr syn))))
 
-;(define-syntax syntax-rules
-;  (lambda (form)
-;    `(quote (!<syntax-rules> ,@(cdr form)))))
+(define-syntax syntax-rules
+  (lambda (form)
+    (info 'syntax-rules)
+    `(quote (!<syntax-rules> ,@(cdr form)))))
 
 ;; Given a syntax transformer, expand an application of that transformer
 ;; to a form that is free of macros.
 (define (expand-syntax form)
+  (info 'expand-syntax)
+
   ;; Extend the environment env
   (define (ext-env name value env)
+    (info 'ext-env)
     (cons (cons name value) env))
 
   ;; Match the ellipsis in a pattern.  Employs the longest match.
   (define (match-ellipsis form pattern literals env)
+    (info 'match-ellipsis)
     (define (try-match head tail)
+      (info 'try-match)
       (let ((v (match tail pattern literals env)))
         (cond ((v (ext-env '... (reverse head) v)))
               ((null? head) #f)
@@ -28,7 +50,9 @@
 
   ;; Match a pattern against a form.  Return an alist of bindings.
   (define (match form pattern literals env)
+    (info 'match)
     (define (_match form pattern env)
+      (info '_match)
       (cond ((memq pattern literals)
               (if (eq? form pattern) env #f))
             ((and (pair? pattern) (eq? (car pattern) '...))
@@ -44,6 +68,7 @@
     ;; Find a rule whose pattern matches a given form.
     ;; Returns (pattern template environment)
     (define (find-rule form rules name literals)
+      (info 'find-rule)
       (cond ((null? rules)
               (throw "syntax-rules: bad syntax" name rules))
             (else (let ((e (match form (caar rules) literals '())))
@@ -53,6 +78,7 @@
 
     ;; Like 'map, but also works for improper lists.
     (define (map-improper f a)
+      (info 'map-improper)
       (letrec ((map-i (lambda (a r)
                         (cond ((null? a) (reverse r))
                               ((not (pair? a)) (append (reverse r) (f a)))
@@ -63,6 +89,7 @@
     ;; possible values listed in `val*`.  Other values from `env` are
     ;; also substituted.
     (define (subst-ellipsis var tmpl val* env)
+      (info 'subst-ellipsis)
       (map (lambda (v)
              (tmpl->form #f tmpl (cons (cons var v) env)))
            val*))
@@ -70,6 +97,7 @@
     ;; Substitute names from `env` with their associated values in `form`.
     ;; If `pattern` is `#f`, no ellipsis substitution is performed.
     (define (tmpl->form pattern form env)
+      (info 'tmpl->form)
       (cond ((not (pair? form)) (let ((v (assv form env)))
                                   (if v (cdr v) form)))
             ((and (pair? form)
@@ -107,6 +135,7 @@
 
     ;; Perfom syntax transformation on `form`.
     (define (transform form)
+      (info 'transform)
       (let ((syn (syntax->list (car form))))
         (if (not syn)
           (throw "expand-syntax: not a syntax transformer" (car form))
@@ -115,11 +144,16 @@
                 (rules (cdr syn))
                 (to-expand (cadr form))
                 (pat/tmpl/env (find-rule to-expand rules name literals)))
-            (write pat/tmpl/env) (newline)
+            (info 'name: name)
+            (info 'literals: literals)
+            (info 'rules: rules)
+            (info 'to-expand: to-expand)
+            (info 'pat/tmpl/env: pat/tmpl/env)
             (expand-all (apply tmpl->form pat/tmpl/env))))))
 
     ;; Expand all applications of syntax transformers in the given `form`.
     (define (expand-all form)
+      (info 'expand-all)
       (cond ((not (pair? form)) form)
             ((eq? (car form) 'quote) form)
             ((syntax->list (car form)) (transform form))
@@ -127,7 +161,9 @@
 
     (expand-all form))
 
-(write
-  (expand-syntax (list '(!<syntax-rules> (print) ((print a) (begin (display a) (newline)))) '(print 'hi))))
-(newline)
+;----------------------------------------------------------------------------
+
+(let ((test (syntax-rules (print) ((print a) (begin (display a) (newline))))))
+  (print 'test-macro: test)
+  (print 'expansion: (expand-syntax '(test (print 'hi)))))
 
