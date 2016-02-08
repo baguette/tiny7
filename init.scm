@@ -42,18 +42,18 @@
 (define *compile-hook* macro-expand-all)
 
 
-(macro (unless form)
+(define-syntax (unless form)
      `(if (not ,(cadr form)) (begin ,@(cddr form))))
 
-(macro (when form)
+(define-syntax (when form)
      `(if ,(cadr form) (begin ,@(cddr form))))
 
 ; DEFINE-MACRO Contributed by Andy Gaynor
-(macro (define-macro dform)
+(define-syntax (define-macro dform)
   (if (symbol? (cadr dform))
-    `(macro ,@(cdr dform))
+    `(define-syntax ,@(cdr dform))
     (let ((form (gensym)))
-      `(macro (,(caadr dform) ,form)
+      `(define-syntax (,(caadr dform) ,form)
          (apply (lambda ,(cdadr dform) ,@(cddr dform)) (cdr ,form))))))
 
 ; Utilities for math. Notice that inexact->exact is primitive,
@@ -286,7 +286,7 @@
 ;;
 ;; Subsequently modified to handle vectors: D. Souflis
 
-(macro
+(define-syntax
  quasiquote
  (lambda (l)
    (define (mcons f l r)
@@ -471,7 +471,7 @@
 
 ;;;; (do ((var init inc) ...) (endtest result ...) body ...)
 ;;
-(macro do
+(define-syntax do
   (lambda (do-macro)
     (apply (lambda (do vars endtest . body)
              (let ((do-loop (gensym)))
@@ -530,7 +530,7 @@
 
 ;;;; Handy for imperative programs
 ;;;; Used as: (define-with-return (foo x y) .... (return z) ...)
-(macro (define-with-return form)
+(define-syntax (define-with-return form)
      `(define ,(cadr form)
           (call/cc (lambda (return) ,@(cddr form)))))
 
@@ -569,7 +569,7 @@
           (apply (pop-handler))
           (apply error x)))
 
-(macro (catch form)
+(define-syntax (catch form)
      (let ((label (gensym)))
           `(call/cc (lambda (exit)
                (push-handler (lambda () (exit ,(cadr form))))
@@ -582,12 +582,12 @@
 
 ;;;;; Definition of MAKE-ENVIRONMENT, to be used with two-argument EVAL
 
-(macro (make-environment form)
+(define-syntax (make-environment form)
      `(apply (lambda ()
                ,@(cdr form)
                (current-environment))))
 
-(define-macro (eval-polymorphic x . envl)
+(define-syntax (eval-polymorphic x . envl)
   (display envl)
   (let* ((env (if (null? envl) (current-environment) (eval (car envl))))
          (xval (eval x env)))

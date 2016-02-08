@@ -2667,7 +2667,7 @@ case OP_REAL_EVAL:
       sc->args = cons(sc, sc->code,                        /* form */
                    cons(sc, sc->envir,                     /* use-env */
                      cons(sc, sc->global_env, sc->NIL)));  /* def-env */
-        sc->code = sc->value;
+      sc->code = sc->value;
       s_goto(sc, OP_APPLY);
     } else {
       sc->code = cdr(sc->code);
@@ -4677,7 +4677,6 @@ static int syntaxnum(pointer p) {
     switch(s[2]) {
     case 'g': return OP_BEGIN;         /* begin */
     case 'l': return OP_DELAY;         /* delay */
-    case 'c': return OP_MACRO0;        /* macro */
     default: return OP_QUOTE;          /* quote */
     }
   case 6:
@@ -4686,6 +4685,8 @@ static int syntaxnum(pointer p) {
     case 'f': return OP_DEF0;          /* define */
     default: return OP_LET0REC;        /* letrec */
     }
+  case 13:
+    return OP_MACRO0;
   default:
     return OP_C0STREAM;                /* cons-stream */
   }
@@ -4866,7 +4867,7 @@ int scheme_init_custom_alloc(scheme *sc, func_alloc malloc, func_dealloc free) {
   assign_syntax(sc, "and");
   assign_syntax(sc, "or");
   assign_syntax(sc, "cons-stream");
-  assign_syntax(sc, "macro");
+  assign_syntax(sc, "define-syntax");
   assign_syntax(sc, "case");
 
   for(i=0; i<n; i++) {
@@ -5122,12 +5123,12 @@ int main(int argc, char **argv) {
     printf(banner);
   }
   if(argc==2 && strcmp(argv[1], "-?")==0) {
-    printf("Usage: tinyscheme -?\n");
-    printf("or:    tinyscheme [<file1> <file2> ...]\n");
+    printf("Usage: tiny7 -?\n");
+    printf("or:    tiny7 [<file1> <file2> ...]\n");
     printf("followed by\n");
     printf("          -1 <file> [<arg1> <arg2> ...]\n");
     printf("          -c <Scheme commands> [<arg1> <arg2> ...]\n");
-    printf("assuming that the executable is named tinyscheme.\n");
+    printf("assuming that the executable is named tiny7.\n");
     printf("Use - as filename for stdin.\n");
     return 1;
   }
