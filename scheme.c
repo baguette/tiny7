@@ -2659,10 +2659,22 @@ static pointer opexe_0(scheme *sc, enum scheme_opcodes op) {
 
      case OP_E0ARGS:     /* eval arguments */
           if (is_macro(sc->value)) {    /* macro expansion */
-               s_save(sc,OP_DOMACRO, sc->NIL, sc->NIL);
-               sc->args = cons(sc,sc->code, sc->NIL);
+               pointer defenv = sc->NIL;
+               pointer p = sc->NIL;
+
+               s_save(sc, OP_DOMACRO, sc->NIL, sc->NIL);
+
+               /* find the definition environment for this macro */
+               for (p = sc->macro_envs; is_pair(car(p)); p = cdr(p)) {
+                 if (caar(p) == sc->value) {
+                    break;
+                 }
+               }
+               sc->args = cons(sc, sc->code,                  /* form */
+                            cons(sc, sc->envir,               /* use-env */
+                              cons(sc, cadar(p), sc->NIL)));  /* def-env */
                sc->code = sc->value;
-               s_goto(sc,OP_APPLY);
+               s_goto(sc, OP_APPLY);
           } else {
                sc->code = cdr(sc->code);
                s_goto(sc,OP_E1ARGS);
@@ -3093,7 +3105,8 @@ static pointer opexe_1(scheme *sc, enum scheme_opcodes op) {
           } else {
                new_slot_in_env(sc, sc->code, sc->value);
           }
-          s_return(sc,sc->code);
+          sc->macro_envs = cons(sc, cons(sc, sc->value, sc->envir), sc->macro_envs);
+          s_return(sc, sc->code);
 
      case OP_CASE0:      /* case */
           s_save(sc,OP_CASE1, sc->NIL, cdr(sc->code));
@@ -4813,6 +4826,7 @@ int scheme_init_custom_alloc(scheme *sc, func_alloc malloc, func_dealloc free) {
   sc->loadport=sc->NIL;
   sc->nesting=0;
   sc->interactive_repl=0;
+  sc->macro_envs=sc->NIL;
 
   if (alloc_cellseg(sc,FIRST_CELLSEGS) != FIRST_CELLSEGS) {
     sc->no_memory=1;
