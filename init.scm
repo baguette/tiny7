@@ -713,4 +713,34 @@
                      (not (cond-eval (cadr condition)))))
             (else (error "cond-expand : unknown operator" (car condition)))))))
 
+;; Explicit renaming macro transformer
+;; Adapted from expand.scm of Chicken Scheme 4.10.0
+(define (transformer f)
+  (define (lookup sym env)
+    (catch #f
+      (eval sym env)))
+
+  (define (alias sym env)
+    (let ((a (gensym)))
+      (eval `(define ,a ,sym) env)
+      a))
+
+  (define (rassq key alist)
+    (cond ((null? alist) #f)
+          ((eq? key (cadar alist)) (car alist))
+          (else (rassq key (cdr alist)))))
+
+  (lambda (form use-env def-env)
+    (let ((renv '()))     ; rename environment
+      (define (rename sym)
+        (cond ((not (symbol? sym)) (sym))
+              ((rassq sym renv) => car)
+              ((lookup sym def-env) (let ((a (alias sym def-env)))
+                                    (set! renv (cons (cons sym a) renv))
+                                    a))))
+      (define (compare a b)
+        (eq? (lookup a use-env) (lookup b use-env)))
+
+      (f form rename compare))))
+
 (gc-verbose #f)
