@@ -66,7 +66,7 @@ static void dl_detach(HMODULE mo) {
 
 static HMODULE dl_attach(const char *module) {
   HMODULE so=dlopen(module, RTLD_LAZY);
-  if(!so) {
+  if (!so) {
     fprintf(stderr, "Error loading scheme extension \"%s\": %s\n", module, dlerror());
   }
   return so;
@@ -129,7 +129,7 @@ static void make_filename(const char *name, char *filename) {
 
 static void make_init_fn(const char *name, char *init_fn) {
   const char *p=strrchr(name, '/');
-  if(p==0) {
+  if (p == 0) {
     p=name;
   } else {
     p++;
