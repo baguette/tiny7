@@ -83,7 +83,6 @@ struct scheme {
   pointer envir;           /* stack register for current environment */
   pointer code;            /* register for current code */
   pointer dump;            /* stack register for next evaluation */
-  pointer macro_envs;      /* association list of macro definition environments */
   
   int interactive_repl;    /* are we in an interactive REPL? */
   

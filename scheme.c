@@ -2659,20 +2659,14 @@ case OP_REAL_EVAL:
 
   case OP_E0ARGS:     /* eval arguments */
     if (is_macro(sc->value)) {    /* macro expansion */
-      pointer defenv = sc->NIL;
-      pointer p = sc->NIL;
-    
       s_save(sc, OP_DOMACRO, sc->NIL, sc->NIL);
-    
-      /* find the definition environment for this macro */
-      for (p = sc->macro_envs; is_pair(car(p)); p = cdr(p)) {
-        if (caar(p) == sc->value) {
-          break;
-        }
-      }
-      sc->args = cons(sc, sc->code,                  /* form */
-        cons(sc, sc->envir,               /* use-env */
-          cons(sc, cadar(p), sc->NIL)));  /* def-env */
+
+      /* TODO: save macro definition environment and pass instead of
+       *       global_env
+       */
+      sc->args = cons(sc, sc->code,                        /* form */
+                   cons(sc, sc->envir,                     /* use-env */
+                     cons(sc, sc->global_env, sc->NIL)));  /* def-env */
         sc->code = sc->value;
       s_goto(sc, OP_APPLY);
     } else {
@@ -3105,7 +3099,6 @@ static pointer opexe_1(scheme *sc, enum scheme_opcodes op) {
     } else {
       new_slot_in_env(sc, sc->code, sc->value);
     }
-    sc->macro_envs = cons(sc, cons(sc, sc->value, sc->envir), sc->macro_envs);
     s_return(sc, sc->code);
   
   case OP_CASE0:      /* case */
@@ -4826,7 +4819,6 @@ int scheme_init_custom_alloc(scheme *sc, func_alloc malloc, func_dealloc free) {
   sc->loadport=sc->NIL;
   sc->nesting=0;
   sc->interactive_repl=0;
-  sc->macro_envs=sc->NIL;
 
   if (alloc_cellseg(sc, FIRST_CELLSEGS) != FIRST_CELLSEGS) {
     sc->no_memory=1;
