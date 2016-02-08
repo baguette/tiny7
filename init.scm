@@ -739,7 +739,11 @@
                                     (set! renv (cons (cons sym a) renv))
                                     a))))
       (define (compare a b)
-        (eq? (lookup a use-env) (lookup b use-env)))
+        (let ((ax (lookup a use-env))
+              (bx (lookup b use-env)))
+          (and (not (eq? ax #f))
+               (not (eq? bx #f))
+               (eq? ax bx))))
 
       (f form rename compare))))
 
