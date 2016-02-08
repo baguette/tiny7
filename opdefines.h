@@ -152,8 +152,8 @@
     _OP_DEF(opexe_4, "list*",                          1,  INF_ARG, TST_NONE,                        OP_LIST_STAR        )
     _OP_DEF(opexe_4, "append",                         0,  INF_ARG, TST_NONE,                        OP_APPEND           )
 #if USE_PLIST
-    _OP_DEF(opexe_4, "put",                            3,  3,       TST_NONE,                        OP_PUT              )
-    _OP_DEF(opexe_4, "get",                            2,  2,       TST_NONE,                        OP_GET              )
+    _OP_DEF(opexe_4, "property-put",                   3,  3,       TST_NONE,                        OP_PLISTPUT         )
+    _OP_DEF(opexe_4, "property-get",                   2,  2,       TST_NONE,                        OP_PLISTGET         )
 #endif
     _OP_DEF(opexe_4, "quit",                           0,  1,       TST_NUMBER,                      OP_QUIT             )
     _OP_DEF(opexe_4, "gc",                             0,  0,       0,                               OP_GC               )

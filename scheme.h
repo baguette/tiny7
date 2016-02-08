@@ -75,7 +75,7 @@ extern "C" {
 #endif
 
 #ifndef USE_PLIST
-# define USE_PLIST 0
+# define USE_PLIST 1
 #endif
 
 /* To force system errors through user-defined error handling (see *error-hook*) */

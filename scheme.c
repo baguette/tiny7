@@ -3986,7 +3986,7 @@ static pointer opexe_4(scheme *sc, enum scheme_opcodes op) {
     s_return(sc, reverse_in_place(sc, car(y), x));
   
 #if USE_PLIST
-  case OP_PUT:        /* put */
+  case OP_PLISTPUT:        /* property-put */
     if (!hasprop(car(sc->args)) || !hasprop(cadr(sc->args))) {
       Error_0(sc, "illegal use of put");
     }
@@ -4002,7 +4002,7 @@ static pointer opexe_4(scheme *sc, enum scheme_opcodes op) {
         symprop(car(sc->args)));
       s_return(sc, sc->T);
     
-  case OP_GET:        /* get */
+  case OP_PLISTGET:        /* property-get */
     if (!hasprop(car(sc->args)) || !hasprop(cadr(sc->args))) {
       Error_0(sc, "illegal use of get");
     }
