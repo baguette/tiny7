@@ -38,6 +38,7 @@ typedef struct port {
       char *curr;
     } string;
   } rep;
+  unsigned char fold_case;
 } port;
 
 /* cell structure */

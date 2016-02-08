@@ -31,13 +31,6 @@
 #include <float.h>
 #include <ctype.h>
 
-#if USE_STRCASECMP
-#include <strings.h>
-# ifndef __APPLE__
-#  define stricmp strcasecmp
-# endif
-#endif
-
 /* Used for documentation purposes, to signal functions in 'interface' */
 #define INTERFACE
 
@@ -66,33 +59,16 @@
   *  Basic memory allocation units
   */
 
-#define banner "TinyScheme 1.41"
+#define banner "Tiny7 1.0"
 
 #include <string.h>
 #include <stdlib.h>
 
-#ifdef __APPLE__
-static int stricmp(const char *s1, const char *s2)
-{
-  unsigned char c1, c2;
-  do {
-    c1 = tolower(*s1);
-    c2 = tolower(*s2);
-    if (c1 < c2)
-      return -1;
-    else if (c1 > c2)
-      return 1;
-    s1++, s2++;
-  } while (c1 != 0);
-  return 0;
-}
-#endif /* __APPLE__ */
-
 #if USE_STRLWR
 static const char *strlwr(char *s) {
-  const char *p=s;
-  while(*s) {
-    *s=tolower(*s);
+  const char *p = s;
+  while (*s) {
+    *s = tolower(*s);
     s++;
   }
   return p;
@@ -100,11 +76,15 @@ static const char *strlwr(char *s) {
 #endif
 
 #ifndef prompt
-# define prompt "ts> "
+# define prompt "t7> "
 #endif
 
 #ifndef InitFile
 # define InitFile "init.scm"
+#endif
+
+#ifndef ENVVARINIT
+# define ENVVARINIT "TINY7INIT"
 #endif
 
 #ifndef FIRST_CELLSEGS
@@ -320,12 +300,12 @@ static const char *charnames[32]={
 static int is_ascii_name(const char *name, int *pc) {
   int i;
   for(i=0; i<32; i++) {
-    if (stricmp(name, charnames[i]) == 0) {
+    if (strcmp(name, charnames[i]) == 0) {
       *pc=i;
       return 1;
     }
   }
-  if (stricmp(name, "del") == 0) {
+  if (strcmp(name, "del") == 0) {
     *pc=127;
     return 1;
   }
@@ -863,7 +843,7 @@ static INLINE pointer oblist_find_by_name(scheme *sc, const char *name)
   for (x = vector_elem(sc->oblist, location); x != sc->NIL; x = cdr(x)) {
     s = symname(car(x));
     /* case-insensitive, per R5RS section 2. */
-    if (stricmp(name, s) == 0) {
+    if (strcmp(name, s) == 0) {
       return car(x);
     }
   }
@@ -899,7 +879,7 @@ static INLINE pointer oblist_find_by_name(scheme *sc, const char *name)
   for (x = sc->oblist; x != sc->NIL; x = cdr(x)) {
     s = symname(car(x));
     /* case-insensitive, per R5RS section 2. */
-    if (stricmp(name, s) == 0) {
+    if (strcmp(name, s) == 0) {
       return car(x);
     }
   }
@@ -1138,7 +1118,7 @@ static pointer mk_atom(scheme *sc, char *q) {
         cons(sc,
           sc->QUOTE,
           cons(sc, mk_atom(sc, p+2), sc->NIL)),
-        cons(sc, mk_symbol(sc, strlwr(q)), sc->NIL)));
+        cons(sc, mk_symbol(sc, q), sc->NIL)));
       }
     #endif
   
@@ -1151,16 +1131,16 @@ static pointer mk_atom(scheme *sc, char *q) {
       c = *p++;
     }
     if (!isdigit(c)) {
-      return (mk_symbol(sc, strlwr(q)));
+      return (mk_symbol(sc, q));
     }
   } else if (c == '.') {
     has_dec_point=1;
     c = *p++;
     if (!isdigit(c)) {
-      return (mk_symbol(sc, strlwr(q)));
+      return (mk_symbol(sc, q));
     }
   } else if (!isdigit(c)) {
-    return (mk_symbol(sc, strlwr(q)));
+    return (mk_symbol(sc, q));
   }
 
   for ( ; (c = *p) != 0; ++p) {
@@ -1181,7 +1161,7 @@ static pointer mk_atom(scheme *sc, char *q) {
           }
         }
       }
-      return (mk_symbol(sc, strlwr(q)));
+      return (mk_symbol(sc, q));
     }
   }
   if (has_dec_point) {
@@ -1215,13 +1195,13 @@ static pointer mk_sharp_const(scheme *sc, char *name) {
     return (mk_integer(sc, x));
   } else if (*name == '\\') { /* #\w (character) */
     int c=0;
-    if (stricmp(name+1, "space") == 0) {
+    if (strcmp(name+1, "space") == 0) {
       c=' ';
-    } else if (stricmp(name+1, "newline") == 0) {
+    } else if (strcmp(name+1, "newline") == 0) {
       c='\n';
-    } else if (stricmp(name+1, "return") == 0) {
+    } else if (strcmp(name+1, "return") == 0) {
       c='\r';
-    } else if (stricmp(name+1, "tab") == 0) {
+    } else if (strcmp(name+1, "tab") == 0) {
       c='\t';
     } else if (name[1] == 'x' && name[2]!=0) {
     int c1=0;
@@ -1403,7 +1383,7 @@ static int file_push(scheme *sc, const char *fname) {
   sc->load_stack[sc->file_i].rep.stdio.curr_line = 0;
   if (fname)
     sc->load_stack[sc->file_i].rep.stdio.filename = store_string(sc, strlen(fname), fname, 0);
-  #endif
+#endif
 }
   return fin!=0;
 }
@@ -1438,8 +1418,9 @@ static port *port_rep_from_filename(scheme *sc, const char *fn, int prop) {
     return 0;
   }
   pt=port_rep_from_file(sc, f, prop);
-  pt->rep.stdio.closeit=1;
-
+  pt->rep.stdio.closeit = 1; 
+  pt->fold_case = 0;
+ 
 #if SHOW_ERROR_LINE
   if (fn)
     pt->rep.stdio.filename = store_string(sc, strlen(fn), fn, 0);
@@ -1451,7 +1432,7 @@ static port *port_rep_from_filename(scheme *sc, const char *fn, int prop) {
 
 static pointer port_from_filename(scheme *sc, const char *fn, int prop) {
   port *pt;
-  pt=port_rep_from_filename(sc, fn, prop);
+  pt = port_rep_from_filename(sc, fn, prop);
   if (pt == 0) {
     return sc->NIL;
   }
@@ -1469,12 +1450,13 @@ static port *port_rep_from_file(scheme *sc, FILE *f, int prop)
   pt->kind = port_file | prop;
   pt->rep.stdio.file = f;
   pt->rep.stdio.closeit = 0;
+  pt->fold_case = 0;
   return pt;
 }
 
 static pointer port_from_file(scheme *sc, FILE *f, int prop) {
   port *pt;
-  pt=port_rep_from_file(sc, f, prop);
+  pt = port_rep_from_file(sc, f, prop);
   if (pt == 0) {
     return sc->NIL;
   }
@@ -1483,7 +1465,7 @@ static pointer port_from_file(scheme *sc, FILE *f, int prop) {
 
 static port *port_rep_from_string(scheme *sc, char *start, char *past_the_end, int prop) {
   port *pt;
-  pt=(port*)sc->malloc(sizeof(port));
+  pt = (port*)sc->malloc(sizeof(port));
   if (pt == 0) {
     return 0;
   }
@@ -1491,12 +1473,13 @@ static port *port_rep_from_string(scheme *sc, char *start, char *past_the_end, i
   pt->rep.string.start=start;
   pt->rep.string.curr=start;
   pt->rep.string.past_the_end=past_the_end;
+  pt->fold_case = 0;
   return pt;
 }
 
 static pointer port_from_string(scheme *sc, char *start, char *past_the_end, int prop) {
   port *pt;
-  pt=port_rep_from_string(sc, start, past_the_end, prop);
+  pt = port_rep_from_string(sc, start, past_the_end, prop);
   if (pt == 0) {
     return sc->NIL;
   }
@@ -1508,7 +1491,7 @@ static pointer port_from_string(scheme *sc, char *start, char *past_the_end, int
 static port *port_rep_from_scratch(scheme *sc) {
   port *pt;
   char *start;
-  pt=(port*)sc->malloc(sizeof(port));
+  pt = (port*)sc->malloc(sizeof(port));
   if (pt == 0) {
     return 0;
   }
@@ -1522,6 +1505,7 @@ static port *port_rep_from_scratch(scheme *sc) {
   pt->rep.string.start=start;
   pt->rep.string.curr=start;
   pt->rep.string.past_the_end=start+BLOCK_SIZE-1;
+  pt->fold_case = 0;
   return pt;
 }
 
@@ -1560,8 +1544,9 @@ static int inchar(scheme *sc) {
   port *pt;
 
   pt = sc->inport->_object._port;
-  if (pt->kind & port_saw_EOF)
-    { return EOF; }
+  if (pt->kind & port_saw_EOF) {
+    return EOF;
+  }
   c = basic_inchar(pt);
   if (c == EOF && sc->inport == sc->loadport) {
     /* Instead, set port_saw_EOF */
@@ -1576,13 +1561,21 @@ static int inchar(scheme *sc) {
 
 static int basic_inchar(port *pt) {
   if (pt->kind & port_file) {
-    return fgetc(pt->rep.stdio.file);
+    int c = fgetc(pt->rep.stdio.file);
+    if (pt->fold_case) {
+      c = tolower(c);
+    }
+    return c;
   } else {
-    if (*pt->rep.string.curr == 0 ||
-      pt->rep.string.curr == pt->rep.string.past_the_end) {
-    return EOF;
+    if (*pt->rep.string.curr == 0
+    ||  pt->rep.string.curr == pt->rep.string.past_the_end) {
+      return EOF;
     } else {
-      return *pt->rep.string.curr++;
+      int c = *pt->rep.string.curr++;
+      if (pt->fold_case) {
+        c = tolower(c);
+      }
+      return c;
     }
   }
 }
@@ -1685,11 +1678,17 @@ static pointer readstrexp(scheme *sc, char delim) {
   int c;
   int c1=0;
   enum { st_ok, st_bsl, st_x1, st_x2, st_oct1, st_oct2 } state=st_ok;
+  pointer retval = sc->NIL;
+  unsigned char old_fold_case = sc->inport->_object._port->fold_case;
+
+  /* don't fold case when reading string literals */
+  sc->inport->_object._port->fold_case = 0;
 
   for (;;) {
-    c=inchar(sc);
+    c = inchar(sc);
     if (c == EOF || p-sc->strbuff > sizeof(sc->strbuff)-1) {
-      return sc->F;
+      retval = sc->F;
+      goto done;
     }
     switch(state) {
       case st_ok:
@@ -1702,9 +1701,11 @@ static pointer readstrexp(scheme *sc, char delim) {
             *p=0;
             switch (delim) {
               case '"':
-                return mk_counted_string(sc, sc->strbuff, p-sc->strbuff);
+                retval = mk_counted_string(sc, sc->strbuff, p-sc->strbuff);
+                goto done;
               case '|':
-                return mk_symbol(sc, sc->strbuff);
+                retval = mk_symbol(sc, sc->strbuff);
+                goto done;
             }
           default:
             *p++=c;
@@ -1768,36 +1769,36 @@ static pointer readstrexp(scheme *sc, char delim) {
             state=st_ok;
           }
         } else {
-          return sc->F;
+          retval = sc->F;
+          goto done;
         }
         break;
       case st_oct1:
       case st_oct2:
-        if (c < '0' || c > '7')
-        {
+        if (c < '0' || c > '7') {
           *p++=c1;
           backchar(sc, c);
           state=st_ok;
-        }
-        else
-        {
-          if (state == st_oct2 && c1 >= 32)
-            return sc->F;
-          
-            c1=(c1<<3)+(c-'0');
-          
-          if (state == st_oct1)
+        } else {
+          if (state == st_oct2 && c1 >= 32) {
+            retval = sc->F;
+          }
+          c1 = (c1<<3) + (c-'0');
+          if (state == st_oct1) {
             state=st_oct2;
-          else
-          {
+          } else {
             *p++=c1;
             state=st_ok;
           }
         }
         break;
-      
     }
   }
+
+  done:
+  /* restore case folding to previous value */
+  sc->inport->_object._port->fold_case = old_fold_case;
+  return retval;
 }
 
 /* check c is in chars */
@@ -1839,8 +1840,10 @@ static INLINE int skipspace(scheme *sc) {
 static int token(scheme *sc) {
   int c;
   c = skipspace(sc);
-  if (c == EOF) { return (TOK_EOF); }
-  switch (c=inchar(sc)) {
+  if (c == EOF) {
+    return (TOK_EOF);
+  }
+  switch (c = inchar(sc)) {
   case EOF:
     return (TOK_EOF);
   case '(':
@@ -1848,7 +1851,7 @@ static int token(scheme *sc) {
   case ')':
     return (TOK_RPAREN);
   case '.':
-    c=inchar(sc);
+    c = inchar(sc);
     if (is_one_of(" \n\t", c)) {
       return (TOK_DOT);
     } else {
@@ -1859,18 +1862,19 @@ static int token(scheme *sc) {
   case '\'':
     return (TOK_QUOTE);
   case ';':
-    while ((c=inchar(sc)) != '\n' && c!=EOF)
+    while ((c = inchar(sc)) != '\n' && c != EOF)
       ;
     
   #if SHOW_ERROR_LINE
     if (c == '\n' && sc->load_stack[sc->file_i].kind & port_file)
       sc->load_stack[sc->file_i].rep.stdio.curr_line++;
-    #endif
+  #endif
   
-    if (c == EOF)
-      { return (TOK_EOF); }
-    else
-      { return (token(sc));}
+    if (c == EOF) {
+      return (TOK_EOF);
+    } else {
+      return (token(sc));
+    }
     case '"':
       return (TOK_DQUOTE);
     case '|':
@@ -1878,14 +1882,14 @@ static int token(scheme *sc) {
     case BACKQUOTE:
       return (TOK_BQUOTE);
     case ',':
-      if ((c=inchar(sc)) == '@') {
+      if ((c = inchar(sc)) == '@') {
         return (TOK_ATMARK);
       } else {
         backchar(sc, c);
         return (TOK_COMMA);
       }
     case '#':
-      c=inchar(sc);
+      c = inchar(sc);
       if (c == '(') {
         return (TOK_VEC);
       } else if (c == 'u') {
@@ -1896,26 +1900,34 @@ static int token(scheme *sc) {
       } else if (c == ';') {
         return (TOK_DATUMCOMMENT);
       } else if (c == '!') {
-        while ((c=inchar(sc)) != '\n' && c!=EOF)
-          ;
+        char *directive = readstr_upto(sc, "\r\n");
+        if (strcmp(directive, "fold-case") == 0) {
+          sc->load_stack[sc->file_i].fold_case = 1;
+        } else if (strcmp(directive, "no-fold-case") == 0) {
+          sc->load_stack[sc->file_i].fold_case = 0;
+        } else {
+          fprintf(stderr, "Error:  unknown directive #!%s\n", directive);
+          return (TOK_EOF);
+        }
         
       #if SHOW_ERROR_LINE
         if (c == '\n' && sc->load_stack[sc->file_i].kind & port_file)
           sc->load_stack[sc->file_i].rep.stdio.curr_line++;
-        #endif
+      #endif
       
-        if (c == EOF)
-          { return (TOK_EOF); }
-        else
-          { return (token(sc));}
+        if (c == EOF) {
+          return (TOK_EOF);
         } else {
-          backchar(sc, c);
-          if (is_one_of(" tfodxb\\", c)) {
-            return TOK_SHARP_CONST;
-          } else {
-            return (TOK_SHARP);
-          }
+          return (token(sc));
         }
+      } else {
+        backchar(sc, c);
+        if (is_one_of(" tfodxb\\", c)) {
+          return TOK_SHARP_CONST;
+        } else {
+          return (TOK_SHARP);
+        }
+      }
       default:
       backchar(sc, c);
       return (TOK_ATOM);
@@ -1927,7 +1939,7 @@ static int token(scheme *sc) {
 
 static void printslashstring(scheme *sc, char *p, int len) {
   int i;
-  unsigned char *s=(unsigned char*)p;
+  unsigned char *s = (unsigned char*)p;
   putcharacter(sc, '"');
   for ( i=0; i<len; i++) {
     if (*s == 0xff || *s == '"' || *s<' ' || *s == '\\') {
@@ -4908,23 +4920,23 @@ int scheme_init_custom_alloc(scheme *sc, func_alloc malloc, func_dealloc free) {
 }
 
 void scheme_set_input_port_file(scheme *sc, FILE *fin) {
-  sc->inport=port_from_file(sc, fin, port_input);
+  sc->inport = port_from_file(sc, fin, port_input);
 }
 
 void scheme_set_input_port_string(scheme *sc, char *start, char *past_the_end) {
-  sc->inport=port_from_string(sc, start, past_the_end, port_input);
+  sc->inport = port_from_string(sc, start, past_the_end, port_input);
 }
 
 void scheme_set_output_port_file(scheme *sc, FILE *fout) {
-  sc->outport=port_from_file(sc, fout, port_output);
+  sc->outport = port_from_file(sc, fout, port_output);
 }
 
 void scheme_set_output_port_string(scheme *sc, char *start, char *past_the_end) {
-  sc->outport=port_from_string(sc, start, past_the_end, port_output);
+  sc->outport = port_from_string(sc, start, past_the_end, port_output);
 }
 
 void scheme_set_external_data(scheme *sc, void *p) {
-  sc->ext_data=p;
+  sc->ext_data = p;
 }
 
 void scheme_deinit(scheme *sc) {
@@ -4973,52 +4985,57 @@ void scheme_deinit(scheme *sc) {
 }
 
 void scheme_load_file(scheme *sc, FILE *fin)
-{ scheme_load_named_file(sc, fin, 0); }
+{
+  scheme_load_named_file(sc, fin, 0);
+}
 
-void scheme_load_named_file(scheme *sc, FILE *fin, const char *filename) {
+void scheme_load_named_file(scheme *sc, FILE *fin, const char *filename)
+{
   dump_stack_reset(sc);
   sc->envir = sc->global_env;
   sc->file_i=0;
-  sc->load_stack[0].kind=port_input|port_file;
-  sc->load_stack[0].rep.stdio.file=fin;
-  sc->loadport=mk_port(sc, sc->load_stack);
-  sc->retcode=0;
+  sc->load_stack[0].kind = port_input|port_file;
+  sc->load_stack[0].rep.stdio.file = fin;
+  sc->load_stack[0].fold_case = 0;
+  sc->loadport = mk_port(sc, sc->load_stack);
+  sc->retcode = 0;
   if (fin == stdin) {
-    sc->interactive_repl=1;
+    sc->interactive_repl = 1;
   }
 
 #if SHOW_ERROR_LINE
   sc->load_stack[0].rep.stdio.curr_line = 0;
-  if (fin!=stdin && filename)
+  if (fin != stdin && filename)
     sc->load_stack[0].rep.stdio.filename = store_string(sc, strlen(filename), filename, 0);
   #endif
 
-  sc->inport=sc->loadport;
+  sc->inport = sc->loadport;
   sc->args = mk_integer(sc, sc->file_i);
   Eval_Cycle(sc, OP_T0LVL);
-  typeflag(sc->loadport)=T_ATOM;
+  typeflag(sc->loadport) = T_ATOM;
   if (sc->retcode == 0) {
-    sc->retcode=sc->nesting!=0;
+    sc->retcode=sc->nesting != 0;
   }
 }
 
 void scheme_load_string(scheme *sc, const char *cmd) {
   dump_stack_reset(sc);
   sc->envir = sc->global_env;
-  sc->file_i=0;
-  sc->load_stack[0].kind=port_input|port_string;
-  sc->load_stack[0].rep.string.start=(char*)cmd; /* This func respects const */
-  sc->load_stack[0].rep.string.past_the_end=(char*)cmd+strlen(cmd);
-  sc->load_stack[0].rep.string.curr=(char*)cmd;
-  sc->loadport=mk_port(sc, sc->load_stack);
-  sc->retcode=0;
-  sc->interactive_repl=0;
-  sc->inport=sc->loadport;
+  sc->file_i = 0;
+  sc->load_stack[0].kind = port_input|port_string;
+  sc->load_stack[0].rep.string.start = (char*)cmd; /* This func respects const */
+  sc->load_stack[0].rep.string.past_the_end = (char*)cmd+strlen(cmd);
+  sc->load_stack[0].rep.string.curr = (char*)cmd;
+  sc->load_stack[0].fold_case = 0;
+  sc->loadport = mk_port(sc, sc->load_stack);
+  sc->retcode = 0;
+  sc->interactive_repl = 0;
+  sc->inport = sc->loadport;
   sc->args = mk_integer(sc, sc->file_i);
   Eval_Cycle(sc, OP_T0LVL);
-  typeflag(sc->loadport)=T_ATOM;
+  typeflag(sc->loadport) = T_ATOM;
   if (sc->retcode == 0) {
-    sc->retcode=sc->nesting!=0;
+    sc->retcode = sc->nesting!=0;
   }
 }
 
@@ -5131,7 +5148,7 @@ int main(int argc, char **argv) {
 #endif
   scheme sc;
   FILE *fin;
-  char *file_name=InitFile;
+  char *file_name = InitFile;
   int retcode;
   int isfile=1;
 
@@ -5158,33 +5175,33 @@ int main(int argc, char **argv) {
   scheme_define(&sc, sc.global_env, mk_symbol(&sc, "load-extension"), mk_foreign_func(&sc, scm_load_ext));
 #endif
   argv++;
-  if (access(file_name, 0)!=0) {
-    char *p=getenv("TINYSCHEMEINIT");
-    if (p!=0) {
-      file_name=p;
+  if (access(file_name, 0) != 0) {
+    char *p = getenv(ENVVARINIT);
+    if (p != 0) {
+      file_name = p;
     }
   }
   do {
     if (strcmp(file_name, "-") == 0) {
-      fin=stdin;
+      fin = stdin;
     } else if (strcmp(file_name, "-1") == 0 || strcmp(file_name, "-c") == 0) {
-      pointer args=sc.NIL;
-      isfile=file_name[1] == '1';
-      file_name=*argv++;
+      pointer args = sc.NIL;
+      isfile = file_name[1] == '1';
+      file_name = *argv++;
       if (strcmp(file_name, "-") == 0) {
-        fin=stdin;
+        fin = stdin;
       } else if (isfile) {
-        fin=fopen(file_name, "r");
+        fin = fopen(file_name, "r");
       }
       for(;*argv;argv++) {
-        pointer value=mk_string(&sc, *argv);
-        args=cons(&sc, value, args);
+        pointer value = mk_string(&sc, *argv);
+        args = cons(&sc, value, args);
       }
-      args=reverse_in_place(&sc, sc.NIL, args);
+      args = reverse_in_place(&sc, sc.NIL, args);
       scheme_define(&sc, sc.global_env, mk_symbol(&sc, "*args*"), args);
     
     } else {
-      fin=fopen(file_name, "r");
+      fin = fopen(file_name, "r");
     }
     if (isfile && fin == 0) {
       fprintf(stderr, "Could not open file %s\n", file_name);
@@ -5194,8 +5211,8 @@ int main(int argc, char **argv) {
       } else {
         scheme_load_string(&sc, file_name);
       }
-      if (!isfile || fin!=stdin) {
-        if (sc.retcode!=0) {
+      if (!isfile || fin != stdin) {
+        if (sc.retcode != 0) {
           fprintf(stderr, "Errors encountered reading %s\n", file_name);
         }
         if (isfile) {
@@ -5203,12 +5220,12 @@ int main(int argc, char **argv) {
         }
       }
     }
-    file_name=*argv++;
-  } while(file_name!=0);
+    file_name = *argv++;
+  } while (file_name != 0);
   if (argc == 1) {
     scheme_load_named_file(&sc, stdin, 0);
   }
-  retcode=sc.retcode;
+  retcode = sc.retcode;
   scheme_deinit(&sc);
 
   return retcode;
