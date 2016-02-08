@@ -48,7 +48,7 @@ static HMODULE dl_attach(const char *module) {
 }
 
 static FARPROC dl_proc(HMODULE mo, const char *proc) {
-  FARPROC procedure = GetProcAddress(mo,proc);
+  FARPROC procedure = GetProcAddress(mo, proc);
   if (!procedure) display_w32_error_msg(proc);
   return procedure;
 }
@@ -65,7 +65,7 @@ static void dl_detach(HMODULE mo) {
 #define SUFFIX ".so"
 
 static HMODULE dl_attach(const char *module) {
-  HMODULE so=dlopen(module,RTLD_LAZY);
+  HMODULE so=dlopen(module, RTLD_LAZY);
   if(!so) {
     fprintf(stderr, "Error loading scheme extension \"%s\": %s\n", module, dlerror());
   }
@@ -74,7 +74,7 @@ static HMODULE dl_attach(const char *module) {
 
 static FARPROC dl_proc(HMODULE mo, const char *proc) {
   const char *errmsg;
-  FARPROC fp=(FARPROC)dlsym(mo,proc);
+  FARPROC fp=(FARPROC)dlsym(mo, proc);
   if ((errmsg = dlerror()) == 0) {
     return fp;
   }
@@ -98,8 +98,8 @@ pointer scm_load_ext(scheme *sc, pointer args)
 
   if ((args != sc->NIL) && is_string((first_arg = pair_car(args)))) {
     name = string_value(first_arg);
-    make_filename(name,filename);
-    make_init_fn(name,init_fn);
+    make_filename(name, filename);
+    make_init_fn(name, init_fn);
     dll_handle = dl_attach(filename);
     if (dll_handle == 0) {
       retval = sc -> F;
@@ -123,19 +123,19 @@ pointer scm_load_ext(scheme *sc, pointer args)
 }
 
 static void make_filename(const char *name, char *filename) {
-  strcpy(filename,name);
-  strcat(filename,SUFFIX);
+  strcpy(filename, name);
+  strcat(filename, SUFFIX);
 }
 
 static void make_init_fn(const char *name, char *init_fn) {
-  const char *p=strrchr(name,'/');
+  const char *p=strrchr(name, '/');
   if(p==0) {
     p=name;
   } else {
     p++;
   }
-  strcpy(init_fn,"init_");
-  strcat(init_fn,p);
+  strcpy(init_fn, "init_");
+  strcat(init_fn, p);
 }
 
 

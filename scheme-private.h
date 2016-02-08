@@ -152,14 +152,14 @@ struct scheme {
 
 /* operator code */
 enum scheme_opcodes {
-#define _OP_DEF(A,B,C,D,E,OP) OP,
+#define _OP_DEF(A, B, C, D, E, OP) OP,
 #include "opdefines.h"
   OP_MAXDEFINED
 };
 
 
-#define cons(sc,a,b) _cons(sc,a,b,0)
-#define immutable_cons(sc,a,b) _cons(sc,a,b,1)
+#define cons(sc, a, b) _cons(sc, a, b, 0)
+#define immutable_cons(sc, a, b) _cons(sc, a, b, 1)
 
 int is_string(pointer p);
 char *string_value(pointer p);
