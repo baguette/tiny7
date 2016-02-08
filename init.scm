@@ -507,6 +507,7 @@
                 equal?
                 (car cmp))))
     (cond
+      ((not (pair? lst)) (error "member: not a list:" lst))
       ((null? lst) #f)
       ((cmp? obj (car lst)) lst)
       (else (member obj (cdr lst) cmp?)))))
@@ -521,9 +522,9 @@
                 equal?
                 (car cmp))))
   (cond
-    ((not (list? alst) (error "assoc: not an alist:" alst)))
+    ((not (pair? alst)) (error "assoc: not a list:" alst))
     ((null? alst) #f)
-    ((not (pair? (car alst))) (error "assoc: not an alist:" (car alst)))
+    ((not (pair? (car alst))) (error "assoc: not an alist:" alst))
     ((cmp? obj (caar alst)) (car alst))
     (else (assoc obj (cdr alst) cmp?)))))
 
@@ -770,11 +771,13 @@
   (lambda (form use-env def-env)
     (let ((renv '()))     ; rename environment
       (define (rename sym)
-        (cond ((not (symbol? sym)) (sym))
+        (cond ((not (symbol? sym)) sym)
               ((rassq sym renv) => car)
               ((lookup sym use-env) (let ((a (alias sym use-env)))
                                     (set! renv (cons (cons sym a) renv))
-                                    a))))
+                                    a))
+              (else sym)))
+
       (define (compare a b)
         (let ((ax (lookup a use-env))
               (bx (lookup b use-env)))
