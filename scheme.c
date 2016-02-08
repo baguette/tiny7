@@ -57,6 +57,7 @@
 #define TOK_VEC     12
 #define TOK_BYTEVEC 13
 #define TOK_DATUMCOMMENT 14
+#define TOK_PIPE    15
 
 #define BACKQUOTE '`'
 #define DELIMITERS  "()\";\f\t\v\n\r "
@@ -367,7 +368,7 @@ static int basic_inchar(port *pt);
 static int inchar(scheme *sc);
 static void backchar(scheme *sc, int c);
 static char   *readstr_upto(scheme *sc, char *delim);
-static pointer readstrexp(scheme *sc);
+static pointer readstrexp(scheme *sc, char delim);
 static INLINE int skipspace(scheme *sc);
 static int token(scheme *sc);
 static void printslashstring(scheme *sc, char *s, int len);
@@ -1679,7 +1680,7 @@ static char *readstr_upto(scheme *sc, char *delim) {
 }
 
 /* read string expression "xxx...xxx" */
-static pointer readstrexp(scheme *sc) {
+static pointer readstrexp(scheme *sc, char delim) {
   char *p = sc->strbuff;
   int c;
   int c1=0;
@@ -1697,8 +1698,14 @@ static pointer readstrexp(scheme *sc) {
             state=st_bsl;
             break;
           case '"':
+          case '|':
             *p=0;
-            return mk_counted_string(sc, sc->strbuff, p-sc->strbuff);
+            switch (delim) {
+              case '"':
+                return mk_counted_string(sc, sc->strbuff, p-sc->strbuff);
+              case '|':
+                return mk_symbol(sc, sc->strbuff);
+            }
           default:
             *p++=c;
             break;
@@ -1735,7 +1742,8 @@ static pointer readstrexp(scheme *sc) {
             state=st_ok;
             break;
           case '"':
-            *p++='"';
+          case '|':
+            *p++=delim;
             state=st_ok;
             break;
           default:
@@ -1865,6 +1873,8 @@ static int token(scheme *sc) {
       { return (token(sc));}
     case '"':
       return (TOK_DQUOTE);
+    case '|':
+      return (TOK_PIPE);
     case BACKQUOTE:
       return (TOK_BQUOTE);
     case ',':
@@ -4229,11 +4239,17 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
     case TOK_ATOM:
       s_return(sc, mk_atom(sc, readstr_upto(sc, DELIMITERS)));
     case TOK_DQUOTE:
-      x=readstrexp(sc);
-      if(x==sc->F) {
+      x = readstrexp(sc, '"');
+      if(x == sc->F) {
         Error_0(sc, "Error reading string");
       }
       setimmutable(x);
+      s_return(sc, x);
+    case TOK_PIPE:
+      x = readstrexp(sc, '|');
+      if (x == sc->F) {
+        Error_0(sc, "Error reading symbol");
+      }
       s_return(sc, x);
     case TOK_SHARP: {
       pointer f=find_slot_in_env(sc, sc->envir, sc->SHARP_HOOK, 1);
