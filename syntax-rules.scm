@@ -16,12 +16,14 @@
 
 ;----------------------------------------------------------------------------
 
+;; `expand-syntax` uses this to check for a 'syntax' type tag
 (define (syntax->list syn)
   (info 'syntax->list)
   (cond ((not (pair? syn)) #f)
         ((not (eq? '!<syntax-rules> (car syn))) #f)
         (else (cdr syn))))
 
+;; Output a description of the syntax rules in a format for `expand-syntax`
 (define-syntax syntax-rules
   (lambda (form)
     (info 'syntax-rules)
@@ -163,7 +165,10 @@
 
 ;----------------------------------------------------------------------------
 
-(let ((test (syntax-rules (print) ((print a) (begin (display a) (newline))))))
+(let ((test (syntax-rules (print)
+              ((print a) (begin
+                           (display a)
+                           (newline))))))
   (print 'test-macro: test)
   (print 'expansion: (expand-syntax '(test (print 'hi)))))
 
