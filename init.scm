@@ -521,16 +521,16 @@
                 equal?
                 (car cmp))))
   (cond
-    ((not (list? alst) (error "assoc: not an alist" alst)))
+    ((not (list? alst) (error "assoc: not an alist:" alst)))
     ((null? alst) #f)
-    ((not (pair? (car alst))) (error "assoc: not an alist" (car alst)))
+    ((not (pair? (car alst))) (error "assoc: not an alist:" (car alst)))
     ((cmp? obj (caar alst)) (car alst))
     (else (assoc obj (cdr alst) cmp?)))))
 
 (define (assq obj alst)
-  (generic-assoc obj alst eq?))
+  (assoc obj alst eq?))
 (define (assv obj alst)
-  (generic-assoc obj alst eqv?))
+  (assoc obj alst eqv?))
 
 (define (acons x y z) (cons (cons x y) z))
 

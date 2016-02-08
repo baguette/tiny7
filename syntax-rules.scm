@@ -6,9 +6,9 @@
         ((not (eq? '!<syntax-rules> (car syn))) #f)
         (else (cdr syn))))
 
-(define-syntax syntax-rules
-  (lambda (form)
-    `(quote (!<syntax-rules> ,@(cdr form)))))
+;(define-syntax syntax-rules
+;  (lambda (form)
+;    `(quote (!<syntax-rules> ,@(cdr form)))))
 
 ;; Given a syntax transformer, expand an application of that transformer
 ;; to a form that is free of macros.
@@ -21,9 +21,9 @@
   (define (match-ellipsis form pattern literals env)
     (define (try-match head tail)
       (let ((v (match tail pattern literals env)))
-        (cond ((v (ext-env '... (reverse head) v))
+        (cond ((v (ext-env '... (reverse head) v)))
               ((null? head) #f)
-              (else (try-match (cdr head) (cons (car head) tail)))))))
+              (else (try-match (cdr head) (cons (car head) tail))))))
     (try-match (reverse form) '()))
 
   ;; Match a pattern against a form.  Return an alist of bindings.
@@ -46,10 +46,10 @@
     (define (find-rule form rules name literals)
       (cond ((null? rules)
               (throw "syntax-rules: bad syntax" name rules))
-            ((else (let ((e (match form (caar rules) literals '())))
+            (else (let ((e (match form (caar rules) literals '())))
                      (if e
                        (list (caar rules) (cadar rules) e)
-                       (find-rule form (cdr rules) name literals)))))))
+                       (find-rule form (cdr rules) name literals))))))
 
     ;; Like 'map, but also works for improper lists.
     (define (map-improper f a)
@@ -64,7 +64,7 @@
     ;; also substituted.
     (define (subst-ellipsis var tmpl val* env)
       (map (lambda (v)
-             (tmpl->form #f tmpl (cons (cons var v)) env))
+             (tmpl->form #f tmpl (cons (cons var v) env)))
            val*))
 
     ;; Substitute names from `env` with their associated values in `form`.
@@ -73,7 +73,7 @@
       (cond ((not (pair? form)) (let ((v (assv form env)))
                                   (if v (cdr v) form)))
             ((and (pair? form)
-                  (pair? (cdr form)
+                  (pair? (cdr form))
                   (eq? (cadr form) '...))
               (let ((var (if (pair? pattern)
                            (car pattern)
@@ -92,7 +92,7 @@
                       (append (list (tmpl->form #f (car form) env))
                               (cdr v-ell)
                               (cddr form)))
-                  (throw "syntax-rules: unmatched ellipsis"))))))
+                  (throw "syntax-rules: unmatched ellipsis")))))
               ((pair? form) (cons (tmpl->form (if (pair? pattern)
                                                 (car pattern)
                                                 #f)
@@ -115,6 +115,7 @@
                 (rules (cdr syn))
                 (to-expand (cadr form))
                 (pat/tmpl/env (find-rule to-expand rules name literals)))
+            (write pat/tmpl/env) (newline)
             (expand-all (apply tmpl->form pat/tmpl/env))))))
 
     ;; Expand all applications of syntax transformers in the given `form`.
@@ -125,3 +126,8 @@
             (else (map-improper expand-all form))))
 
     (expand-all form))
+
+(write
+  (expand-syntax (list '(!<syntax-rules> (print) ((print a) (begin (display a) (newline)))) '(print 'hi))))
+(newline)
+
