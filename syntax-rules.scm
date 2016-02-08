@@ -1,6 +1,10 @@
 ;;; 'expand-syntax adapted from "Scheme 9 From Empty Space" by Nils M. Holm
 ;;; TODO This could use some more testing
 
+;; BUGS
+;;  - Pattern repetition does not work properly: ((_ var ...) (print var ...))
+;;  - Recursive macros do not work properly: ((f) (newline)) ((f n) (f))
+
 ;----------------------------------------------------------------------------
 
 ;; Scan a `form` and determine which elements correspond to the elements
@@ -16,10 +20,12 @@
                                    form)))
                       (if (memq #f e*)
                         #f
-                        (cons (cons '... e*) env))))
+                        (let ((m (cons (cons '... e*) env)))
+                          m))))
                   ((pair? form)
-                    (let ((e (match (car form) (car pattern) env)))
-                      (and e (match (cdr form) (cdr pattern) e))))
+                    (let* ((e (match (car form) (car pattern) env))
+                           (e! (and e (match (cdr form) (cdr pattern) e))))
+                      e!))
                   (else #f)))
           ((memq pattern keywords)
             (if (eq? pattern form) env #f))

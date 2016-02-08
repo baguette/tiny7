@@ -3578,14 +3578,14 @@ static pointer opexe_2(scheme *sc, enum scheme_opcodes op) {
   }
 
   case OP_SYM2STR: /* symbol->string */
-    x=mk_string(sc, symname(car(sc->args)));
+    x = mk_string(sc, symname(car(sc->args)));
     setimmutable(x);
     s_return(sc, x);
   
   case OP_ATOM2STR: /* atom->string */ {
     long pf = 0;
-    x=car(sc->args);
-    if (cdr(sc->args)!=sc->NIL) {
+    x = car(sc->args);
+    if (cdr(sc->args) != sc->NIL) {
       /* we know cadr(sc->args) is a natural number */
       /* see if it is 2, 8, 10, or 16, or error */
       pf = ivalue_unchecked(cadr(sc->args));
@@ -3669,12 +3669,13 @@ static pointer opexe_2(scheme *sc, enum scheme_opcodes op) {
     for (x = sc->args; x != sc->NIL; x = cdr(x)) {
       len += strlength(car(x));
     }
-    newstr = mk_empty_string(sc, len, ' ');
+    newstr = mk_empty_string(sc, len, '\0');
     /* store the contents of the argument strings into the new string */
     for (pos = strvalue(newstr), x = sc->args; x != sc->NIL;
       pos += strlength(car(x)), x = cdr(x)) {
       memcpy(pos, strvalue(car(x)), strlength(car(x)));
     }
+    *pos = '\0';    /* ensure the string is NUL-terminated */
     s_return(sc, newstr);
   }
 
