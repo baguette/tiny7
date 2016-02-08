@@ -4882,9 +4882,6 @@ int scheme_init_custom_alloc(scheme *sc, func_alloc malloc, func_dealloc free) {
   sc->c_nest = sc->NIL;
 
   sc->oblist = oblist_initial_value(sc);
-  /* init line definition dictionary */
-  new_frame_in_env(sc, sc->NIL);
-  sc->lambda_lines = sc->envir;
   /* init global_env */
   new_frame_in_env(sc, sc->NIL);
   sc->global_env = sc->envir;

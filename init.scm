@@ -1,4 +1,4 @@
-;    Initialization file for TinySCHEME 1.41
+;    Initialization file for Tiny7 1.0
 
 ; Per R5RS, up to four deep compositions should be defined
 (define (caar x) (car (car x)))
