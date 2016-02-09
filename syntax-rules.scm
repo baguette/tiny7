@@ -1,9 +1,6 @@
 ;;; 'expand-syntax adapted from "Scheme 9 From Empty Space" by Nils M. Holm
 ;;; TODO This could use some more testing
 
-;; BUGS
-;;  - Recursive macros do not work properly: ((f) (newline)) ((f n) (f))
-
 ;----------------------------------------------------------------------------
 
 ;; Scan a `form` and determine which elements correspond to the elements
@@ -53,7 +50,8 @@
 
   (let ((mapfn (lambda (x)
                  (alpha-conv x bound rename compare))))
-    (cond ((symbol? form) (rename form))
+    (cond ((memq form bound) form)        ; TODO - should use compare here?
+          ((symbol? form) (rename form))
           ((pair? form) (map-improper mapfn form '()))
           ((vector? form) (vector-map mapfn form))
           (else form))))
@@ -64,8 +62,8 @@
   (define (expand tmpl env)
     (cond ((and (pair? tmpl)
                 (pair? (cdr tmpl))
-                (eq? (cadr tmpl) '...))
-            (let ((eenv (assq '... env)))
+                (eq? (cadr tmpl) '...))    ; TODO - should use compare here?
+            (let ((eenv (assq '... env)))  ; TODO - should use compare here?
               (if (not eenv)
                 (throw "syntax-rules: no matching ... in pattern" tmpl)
                 (begin
@@ -75,7 +73,7 @@
                                (cdr eenv))
                           (expand (cddr tmpl) eenv))))))
           ((not (pair? tmpl))
-            (cond ((assq tmpl env) => cdr)
+            (cond ((assq tmpl env) => cdr) ; TODO - should use compare here?
                   (else tmpl)))
           (else
             (cons (expand (car tmpl) env)
