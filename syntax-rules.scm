@@ -1,5 +1,8 @@
 ;;; 'expand-syntax adapted from "Scheme 9 From Empty Space" by Nils M. Holm
 ;;; TODO This could use some more testing
+;;; TODO R7RS:
+;;;       - user-defined ellipsis keyword
+;;;       - `_` as wildcard
 
 ;----------------------------------------------------------------------------
 
