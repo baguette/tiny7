@@ -2,7 +2,6 @@
 ;;; TODO This could use some more testing
 
 ;; BUGS
-;;  - Pattern repetition does not work properly: ((_ var ...) (print var ...))
 ;;  - Recursive macros do not work properly: ((f) (newline)) ((f n) (f))
 
 ;----------------------------------------------------------------------------
@@ -63,13 +62,10 @@
 ;; in the environment `env`.
 (define (syntax-expand bound tmpl env rename compare)
   (define (expand tmpl env)
-    (cond ((not (pair? tmpl))
-            (cond ((assq tmpl env) => cdr)
-                  (else tmpl)))
-          ((and (pair? tmpl)
+    (cond ((and (pair? tmpl)
                 (pair? (cdr tmpl))
-                (compare (cadr tmpl) (rename '...)))
-            (let ((eenv (assoc (rename '...) env compare)))
+                (eq? (cadr tmpl) '...))
+            (let ((eenv (assq '... env)))
               (if (not eenv)
                 (throw "syntax-rules: no matching ... in pattern" tmpl)
                 (begin
@@ -78,6 +74,9 @@
                                  (expand (car tmpl) x))
                                (cdr eenv))
                           (expand (cddr tmpl) eenv))))))
+          ((not (pair? tmpl))
+            (cond ((assq tmpl env) => cdr)
+                  (else tmpl)))
           (else
             (cons (expand (car tmpl) env)
                   (expand (cdr tmpl) env)))))

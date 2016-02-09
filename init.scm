@@ -33,7 +33,8 @@
 ;;;; Utility to ease macro creation
 (define (macro-expand form)
   (let ((object (eval (car form))))
-    ((eval (get-closure-code object) (get-closure-environment object)) form)))
+    ((eval (get-closure-code object) (get-closure-environment object))
+     form (current-environment) (get-closure-environment object))))
 
 (define (macro-expand-all form)
   (if (macro? form)
