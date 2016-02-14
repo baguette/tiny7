@@ -77,7 +77,7 @@ set TAGS_SRCS {scheme.h scheme.c dynload.h dynload.c}
 
 rule tags {TAGS}
 rule TAGS {$TAGS_SRCS} {
-	ctags {*}$INPUTS
+	exec ctags {*}$INPUTS
 }
 
 rule! install {all} {
@@ -109,5 +109,30 @@ rule! install {all} {
 	foreach doc {CHANGES COPYING Manual.txt} {
 		exec {*}$INSTALL $doc "$DESTDIR/$DOCDIR"
 	}
+}
+
+rule pdf {refman.tex} {
+	set CWD [pwd]
+	if {![file exists doc]} {
+		file mkdir doc
+	}
+	cd doc
+	exec pdflatex ../refman.tex
+	exec makeindex refman.idx
+	exec pdflatex ../refman.tex
+	cd $CWD
+}
+
+rule html {refman.tex} {
+	set CWD [pwd]
+	if {![file exists doc]} {
+		file mkdir doc
+	}
+	cd doc
+	exec tex2page ../refman.tex
+	exec makeindex refman.idx
+	exec tex2page ../refman.tex
+	exec sed {s@\$hr\$@<hr />@} -i refman.html
+	cd $CWD
 }
 
